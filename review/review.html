@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caravan Album - Review</title>
+<style>
+:root{--bg:#14161a;--panel:#1d2026;--line:#2b303a;--fg:#e8eaee;--mut:#8b93a1;--keep:#2fb36d;--maybe:#e0a526;--cut:#d9534f;--acc:#4c8dff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,Segoe UI,Arial,sans-serif}
+header{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);padding:8px 14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+.stat{padding:3px 9px;border-radius:12px;background:#262b34;font-size:12px}
+.stat b{font-weight:700}
+.k{color:var(--keep)}.m{color:var(--maybe)}.c{color:var(--cut)}
+button,select,input,textarea{font:inherit;color:var(--fg);background:#262b34;border:1px solid var(--line);border-radius:6px;padding:5px 9px}
+button{cursor:pointer}button:hover{background:#2f3541}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.layout{display:flex}
+aside{width:210px;flex:none;position:sticky;top:48px;align-self:flex-start;height:calc(100vh - 48px);overflow:auto;padding:10px;border-right:1px solid var(--line);background:var(--panel)}
+aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:12px 0 6px}
+.day{display:block;width:100%;text-align:left;margin-bottom:4px}
+.day small{color:var(--mut);float:right}
+main{flex:1;padding:12px 16px 80px;min-width:0}
+.dayhead{margin:18px 0 8px;font-size:15px;font-weight:700;display:flex;gap:10px;align-items:baseline}
+.dayhead span{font-weight:400;color:var(--mut);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
+.card{position:relative;background:var(--panel);border:2px solid transparent;border-radius:8px;overflow:hidden;cursor:pointer}
+.card img{display:block;width:100%;height:128px;object-fit:cover;background:#000}
+.card .meta{padding:4px 6px;font-size:11px;color:var(--mut);display:flex;justify-content:space-between;gap:4px}
+.card .meta b{color:var(--fg)}
+.card .place{padding:0 6px 4px;font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.keep{border-color:var(--keep)}.card.maybe{border-color:var(--maybe)}.card.cut{border-color:#3a2020;opacity:.45}
+.card.sel{outline:3px solid var(--acc)}.card.focus{box-shadow:0 0 0 3px #fff}
+.badge{position:absolute;top:4px;left:4px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:#000a}
+.badge.v{background:#c0392b}.badge.l{left:auto;right:4px;background:#2563eb}
+.dot{position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%}
+.ppl{position:absolute;bottom:42px;left:4px;display:flex;gap:2px}
+.ppl i{font-style:normal;background:#000b;border-radius:3px;padding:0 4px;font-size:10px}
+.soft{position:absolute;bottom:42px;right:4px;background:#e0a526;color:#000;border-radius:3px;padding:0 4px;font-size:10px;font-weight:700}
+.bulk{position:fixed;bottom:0;left:210px;right:0;background:#0b0d10;border-top:1px solid var(--line);padding:8px 16px;display:none;gap:8px;align-items:center;flex-wrap:wrap;z-index:30}
+.bulk.show{display:flex}
+.lb{position:fixed;inset:0;background:#000d;z-index:50;display:none}
+.lb.show{display:flex}
+.lbin{margin:auto;width:min(1300px,96vw);height:94vh;background:var(--panel);border-radius:10px;display:flex;overflow:hidden}
+.lbimg{flex:1;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+.lbimg{overflow:hidden}
+.lbimg img,.lbimg video{max-width:100%;max-height:calc(94vh - 200px)!important;object-fit:contain}
+.lbimg .strip{max-height:100px!important;margin-top:6px}
+.lbside{flex:none}
+.lbside{width:330px;padding:14px;overflow:auto;border-left:1px solid var(--line)}
+.lbnav{position:sticky;top:-14px;z-index:5;margin:-14px -14px 8px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:6px;justify-content:flex-end}
+.lbnav button{width:30px;height:28px;padding:0;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center}
+.lbnav #close{margin-left:6px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.chip{padding:3px 10px;border-radius:14px;cursor:pointer;border:1px solid var(--line);background:#262b34;user-select:none}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.dec button{flex:1}
+.dec .keep.on{background:var(--keep)}.dec .maybe.on{background:var(--maybe);color:#000}.dec .cut.on{background:var(--cut)}
+textarea{width:100%;min-height:60px;direction:rtl;text-align:right}
+.kv{font-size:12px;color:var(--mut)}.kv b{color:var(--fg);font-weight:500}
+.tabs{display:flex;gap:6px}
+.frame{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;align-items:flex-start}
+.frame img{height:110px;border-radius:4px}
+.frame .info{flex:1;font-size:12px}
+.conf-high{color:var(--keep)}.conf-ok{color:var(--maybe)}.conf-low{color:var(--cut)}
+.hint{color:var(--mut);font-size:12px;margin:4px 0 10px}
+.film{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0}.film img{width:100%;border:2px solid transparent;border-radius:4px;cursor:pointer;display:block}.film img.on{border-color:var(--keep)}.film div{position:relative}.film span{position:absolute;bottom:2px;left:3px;background:#000b;font-size:10px;padding:0 3px;border-radius:3px}.pill{display:inline-block;padding:0 6px;border-radius:8px;background:#2a3a55;color:#9bc0ff;font-size:11px}
+.ctx{display:flex;gap:4px;margin-top:8px;padding:0 6px;max-width:100%;overflow:auto}.ctx div{flex:none;position:relative;border:3px solid #444;border-radius:5px;cursor:pointer;opacity:.9}.ctx div.keep{border-color:var(--keep)}.ctx div.maybe{border-color:var(--maybe)}.ctx div.cut{border-color:var(--cut);opacity:.5}.ctx div.now{outline:3px solid #fff}.ctx img{display:block;height:64px;max-width:110px;object-fit:cover;border-radius:2px}.ctx span{position:absolute;bottom:0;left:0;background:#000b;font-size:9px;padding:0 3px}
+.toast{position:fixed;bottom:60px;right:20px;background:#0b0d10;border:1px solid var(--line);padding:8px 14px;border-radius:8px;z-index:90;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Caravan Album - Review</h1>
+  <div class="tabs"><button id="tabP" class="on">Photos &amp; videos</button><button id="tabF">Your 66 frames</button><button id="tabN">No timestamp</button></div>
+  <span class="stat" title="Items where you made the decision yourself">Reviewed <b id="sR">0</b></span> <span class="stat k">Keep <b id="sK">0</b></span><span class="stat m">Maybe <b id="sM">0</b></span><span class="stat c">Cut <b id="sC">0</b></span>
+  <span class="stat" title="Assumes about 8 images per page, both sides, packed collage style">~<b id="sP">0</b> pages if you keep only 'Keep'</span>
+  <span style="flex:1"></span>
+  <select id="fTier"><option value="">All suggestions</option><option value="notX">All except my suggested cuts (A+B+C)</option><option value="A">My heroes (A)</option><option value="B">My strong (B)</option><option value="C">My maybes (C)</option><option value="X">My suggested cuts (X) - not yet your decision</option><option value="diff">Where you changed my mind</option></select>
+  <select id="fKind"><option value="">All (photos, videos, maps)</option><option value="photo">Photos only</option><option value="video">Videos only</option><option value="map">Maps only</option></select>
+  <select id="fDec"><option value="">Any decision</option><optgroup label="Decided by YOU"><option value="ykeep">Your Keeps</option><option value="ymaybe">Your Maybes</option><option value="ycut">Your Cuts</option></optgroup><option value="unrev">Not reviewed by you yet</option><optgroup label="Marks"><option value="qr">Videos marked for QR</option><option value="pinned">Pinned to an album page</option></optgroup><optgroup label="Current state (your decisions + my defaults)"><option value="keep">Keep</option><option value="maybe">Maybe</option><option value="cut">Cut</option></optgroup></select>
+  <select id="fPpl"><option value="">Anyone</option></select>
+  <button id="xMaybe" title="Turns every photo/video I rated X (and you have not decided yourself) from Cut into Maybe, so it shows normally next to its neighbours. They stay marked as NOT reviewed by you.">My X cuts &rarr; Maybe</button><button id="xReset" title="Puts my X items you have not decided yourself back to Cut">Reset X to Cut</button><button id="save">Save to folder (Ctrl+S)</button>
+</header>
+<div class="layout">
+<aside>
+  <h3>Days</h3><div id="days"></div>
+  <h3>People (tag in photo or bulk)</h3><div id="peopleKey" class="kv"></div>
+  <h3>Keys</h3>
+  <div class="kv">Click = open &middot; Ctrl/Shift+click = select<br>1 keep &middot; 2 maybe &middot; 3 cut (hover or open)<br>Arrows = prev/next in viewer &middot; Esc = close</div>
+  <h3>Layers</h3>
+  <label class="kv"><input type="checkbox" id="showSoft" checked> Flag soft/blurry (yellow)</label>
+</aside>
+<main id="main"></main>
+</div>
+<div class="bulk" id="bulk">
+  <b id="bulkN"></b>
+  <button data-bd="keep" class="k">Keep</button><button data-bd="maybe" class="m">Maybe</button><button data-bd="cut" class="c">Cut</button>
+  <span class="kv">Tag people:</span><span id="bulkPpl" class="row" style="margin:0"></span>
+  <button id="bulkClear">Clear selection</button>
+</div>
+<div class="lb" id="lb"><div class="lbin">
+  <div class="lbimg"><img id="lbImg"><video id="lbVid" controls preload="auto" muted style="display:none;max-width:100%;max-height:70vh"></video><img id="lbStrip" class="strip"><div class="ctx" id="lbCtx"></div></div>
+  <div class="lbside" id="lbSide"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<script src="data.js"></script>
+<script src="../film/film.js" onerror="window.FILM=window.FILM||{}"></script>
+<script>
+const PEOPLE=[["Eran","ערן"],["Liat","ליאת"],["Omer","עומר"],["Zohar","זוהר"],["Idan","עידן"],["Friends","חברים"],["Strangers","זרים"]];
+const KEY="caravan_review_v1";
+const D=window.DATA, items=D.items.slice().sort((a,b)=>a.t_local.localeCompare(b.t_local)||a.n-b.n), frames=D.frames, notime=D.notime;
+const byN={};items.forEach(r=>byN[r.n]=r);
+const tierDef={A:"keep",B:"keep",C:"maybe",X:"cut"};
+let S={items:{},frames:{},notime:{}};
+try{const raw=localStorage.getItem(KEY);if(raw)S=JSON.parse(raw)}catch(e){}
+S.items=S.items||{};S.frames=S.frames||{};S.notime=S.notime||{};
+/* migrate: anything that differs from my default must have been your decision */
+if(!S.mig){items.forEach(r=>{const s=S.items[r.n];if(s&&!s.x&&s.d!==(tierDef[r.tier]||"cut"))s.x=true});S.mig=1;persist()}
+function st(r){let s=S.items[r.n];if(!s){s=S.items[r.n]={d:tierDef[r.tier]||"cut",p:[],c:"",x:false};}return s}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=s=>document.querySelector(s);
+const img=p=>"../"+encodeURI(p).replace(/#/g,"%23");
+let filt={day:"",tier:"",kind:"",dec:"",ppl:""},sel=new Set(),cur=null,lastN=null,view="P";
+const days=[...new Set(items.map(r=>r.t_local.slice(0,10)))];
+const DN=d=>new Date(d+"T12:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+function counts(){let k=0,m=0,c=0;items.forEach(r=>{const d=st(r).d;if(d=="keep")k++;else if(d=="maybe")m++;else c++});
+  frames.forEach(f=>{const s=S.frames[f.id];if(s&&s.d=="keep")k++});
+  $("#sR").textContent=items.filter(r=>st(r).x).length;$("#sK").textContent=k;$("#sM").textContent=m;$("#sC").textContent=c;$("#sP").textContent=Math.round(k/8)}
+function shown(){return items.filter(r=>{const s=st(r);
+  if(filt.day&&r.t_local.slice(0,10)!=filt.day)return false;
+  if(filt.kind&&r.kind!=filt.kind)return false;
+  if(filt.dec){const f=filt.dec;if(f=="qr"){if(!s.qr)return false}else if(f=="pinned"){if(!s.pg)return false}else if(f=="unrev"){if(s.x)return false}else if(f[0]=="y"){if(!s.x||s.d!=f.slice(1))return false}else if(s.d!=f)return false}
+  if(filt.tier=="diff"){if(s.d==(tierDef[r.tier]||"cut"))return false}else if(filt.tier=="notX"){if(r.tier=="X")return false}else if(filt.tier&&r.tier!=filt.tier)return false;
+  if(filt.ppl&&!(s.p||[]).includes(filt.ppl))return false;return true})}
+function card(r){const s=st(r);const el=document.createElement("div");
+  el.className="card "+s.d+(sel.has(r.n)?" sel":"")+(cur==r.n||lastN==r.n?" focus":"");el.dataset.n=r.n;
+  const ppl=(s.p||[]).map(p=>"<i>"+p[0]+"</i>").join("");
+  el.innerHTML=`<img loading="lazy" src="${img(r.thumb)}">`+
+   (r.kind=="video"?`<span class="badge v">&#9654; ${Math.round(r.dur||0)}s</span>`:"")+(r.live?`<span class="badge l">LIVE</span>`:"")+(r.matched?`<span class="badge l" style="top:22px;background:#7c3aed">MATCHED</span>`:"")+(st(r).qr?`<span class="badge" style="top:40px;background:#111;border:1px solid #fff">QR</span>`:"")+(st(r).pg?`<span class="badge" style="top:40px;left:auto;right:4px;background:#0a7">p${st(r).pg}</span>`:"")+(st(r).pt!==undefined&&st(r).pt!==""?`<span class="badge" style="top:22px;background:#0a7">frame ${st(r).pt}s</span>`:"")+
+   (ppl?`<div class="ppl">${ppl}</div>`:"")+(($("#showSoft").checked&&r.kind=="photo"&&r.sharp<450)?`<span class="soft">soft</span>`:"")+
+   `<div class="meta"><b>#${r.n}${s.x?" &#10003;":""}</b><span>${r.t_local.slice(11,16)}</span><span>${r.tier}</span></div><div class="place">${r.place||"?"}${r.loc_src&&r.loc_src!="gps"?" *":""}</div>`;
+  return el}
+function render(){counts();persist();
+  const m=$("#main");m.innerHTML="";
+  if(view=="P"){const list=shown();let last="";let grid;
+   list.forEach(r=>{const day=r.t_local.slice(0,10);if(day!=last){last=day;const n=list.filter(x=>x.t_local.slice(0,10)==day);
+     const h=document.createElement("div");h.className="dayhead";const kc=n.filter(x=>st(x).d=="keep").length;
+     h.innerHTML=`${DN(day)} <span>${n.length} shown &middot; keep ${kc} &middot; ${[...new Set(n.map(x=>x.place).filter(Boolean))].slice(0,5).join(" &rarr; ")}</span>`;m.appendChild(h);grid=document.createElement("div");grid.className="grid";m.appendChild(grid)}
+     grid.appendChild(card(r))});
+   if(!list.length)m.innerHTML="<p class=hint>Nothing matches these filters.</p>";
+  }else if(view=="F")renderFrames();else renderNoTime();
+  renderDays();renderBulk()}
+function renderDays(){const dv=$("#days");dv.innerHTML="";
+  const all=document.createElement("button");all.className="day"+(filt.day==""?" on":"");all.innerHTML=`All days <small>${items.length}</small>`;all.onclick=()=>{filt.day="";view="P";tabs();render()};dv.appendChild(all);
+  days.forEach(d=>{const n=items.filter(r=>r.t_local.slice(0,10)==d);const k=n.filter(r=>st(r).d=="keep").length;
+   const b=document.createElement("button");b.className="day"+(filt.day==d?" on":"");b.innerHTML=`${DN(d)} <small>${k}/${n.length}</small>`;b.onclick=()=>{filt.day=d;view="P";tabs();render();scrollTo(0,0)};dv.appendChild(b)});
+  $("#peopleKey").innerHTML=PEOPLE.map(p=>`<span>${p[0]} <b>${p[1]}</b> (${p[0][0]})</span>`).join("<br>")}
+function renderBulk(){const b=$("#bulk");b.classList.toggle("show",sel.size>0);$("#bulkN").textContent=sel.size+" selected";
+  $("#bulkPpl").innerHTML=PEOPLE.map(p=>`<span class="chip" data-bp="${p[0]}">${p[0]}</span>`).join("")}
+/* viewer */
+function open(n){cur=n;lastN=n;const r=byN[n];if(!r)return;const s=st(r);$("#lb").classList.add("show");
+  {const F=(window.FILM||{})[fkey(r.id)];const pt=st(r).pt;let src=img(r.thumb);if(F&&pt!==undefined&&pt!==""){const f=F.frames.reduce((a,b)=>Math.abs(b.t-pt)<Math.abs(a.t-pt)?b:a);src="../film/"+fkey(r.id)+"/"+f.f}$("#lbImg").src=src}const strip=$("#lbStrip");if(r.strip){strip.src=img(r.strip);strip.style.display=""}else strip.style.display="none";
+  const note=(r.note||r.dup_of||r.conf)?`<div class="kv">${r.conf?`<span class="pill">match: ${r.conf}</span> `:""}${r.dup_of?`<b>Duplicate of #${r.dup_of}</b> `:""}${r.note||""}</div>`:"";
+  const live=r.live?`<div class="kv">Live Photo clip paired: <b>${r.live}</b></div>`:"";
+  const gps=(r.lat!=null)?`<a style="color:var(--acc)" target="_blank" href="https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=14/${r.lat}/${r.lon}">${(+r.lat).toFixed(4)}, ${(+r.lon).toFixed(4)}</a>`:"none";
+  $("#lbSide").innerHTML=`<div class="lbnav"><button id="prev" title="Previous (&larr;)">&#9664;</button><button id="next" title="Next (&rarr;)">&#9654;</button><button id="close" title="Close (Esc)">&#10005;</button></div>
+   <div class="kv" style="font-size:15px"><b>#${r.n}</b> &middot; ${r.kind}${r.kind=="video"?" "+Math.round(r.dur||0)+"s":""} &middot; my suggestion: <b>${r.tier}</b></div>
+   <div class="kv">${r.name}</div>
+   <div class="kv">Time: <b>${r.t_local.replace("T"," ")}</b> <i>(${r.t_src||""})</i></div>
+   <div class="kv">Place: <b>${r.place||"?"}${r.cc?" ("+r.cc+")":""}</b> ${r.loc_src&&r.loc_src!="gps"?"<i>(inferred: "+r.loc_src+")</i>":""}<br>GPS: ${gps}</div>
+   <div class="kv">Device: <b>${r.device||"unknown"}</b> &middot; sharpness <b>${Math.round(r.sharp)}</b></div>${live}${note}
+   <div class="row dec"><button class="keep ${s.d=="keep"?"on":""}" data-d="keep">Keep (1)</button><button class="maybe ${s.d=="maybe"?"on":""}" data-d="maybe">Maybe (2)</button><button class="cut ${s.d=="cut"?"on":""}" data-d="cut">Cut (3)</button></div>
+   <div class="kv">Caption / fun fact (Hebrew OK)</div><textarea id="cap" placeholder="...">${s.c||""}</textarea>
+   ${qrHTML(r,s)}
+   ${filmHTML(r,s)}
+   ${pageHTML(r,s)}
+   <div class="kv" style="margin-top:10px">Who is in it</div><div class="row">${PEOPLE.map(p=>`<span class="chip ${(s.p||[]).includes(p[0])?"on":""}" data-p="${p[0]}">${p[0]}</span>`).join("")}</div>`;
+  const pi=$("#ptIn");if(pi)pi.onchange=e=>{st(r).pt=e.target.value.trim();persist();open(cur)};const pc=$("#ptClr");if(pc)pc.onclick=()=>{st(r).pt="";persist();open(cur)};
+  $("#lbCtx").innerHTML=ctxHTML(r.n);const cx=document.querySelector("#lbCtx .now");if(cx)cx.scrollIntoView({inline:"center",block:"nearest"});
+  const pg=$("#pgIn");if(pg)pg.onchange=e=>{const v=e.target.value.trim();st(r).pg=v?parseInt(v)||"":"";persist();open(cur)};const pgc=$("#pgClr");if(pgc)pgc.onclick=()=>{st(r).pg="";persist();open(cur)};
+  const qc=$("#qrChk");if(qc)qc.onchange=e=>{st(r).qr=e.target.checked;persist();open(cur)};const ql=$("#qrLink");if(ql)ql.onchange=e=>{st(r).ql=e.target.value.trim();persist()};const qt=$("#qrLab");if(qt)qt.onchange=e=>{st(r).qt=e.target.value.trim();persist()};
+  $("#cap").oninput=e=>{st(r).c=e.target.value;persist()};
+  setupVid(r);render2()}
+function stopVid(){const v=$("#lbVid");if(v){v.pause()}}
+function vidSrc(r){return "../../"+r.id.replace(/\\/g,"/").split("/").map(encodeURIComponent).join("/")}
+function setupVid(r){const v=$("#lbVid"),im=$("#lbImg");
+  if(r.kind!="video"){v.pause();v.style.display="none";im.style.display="";return}
+  const src=vidSrc(r);
+  if(v.dataset.src!=src){v.dataset.src=src;v.src=src;const p=st(r).pt;v.onloadedmetadata=()=>{if(p!==undefined&&p!=="")v.currentTime=+p}}
+  v.style.display="";im.style.display="none";
+  v.onerror=()=>{v.style.display="none";im.style.display="";const m=$("#vidMsg");if(m)m.innerHTML="<b>Browser cannot play this file</b> (codec). Use the filmstrip and exact-second box instead.";v.dataset.src=""};
+  v.ontimeupdate=v.onseeked=()=>{const t=$("#vidT");if(t)t.textContent=v.currentTime.toFixed(3)};
+  const t=$("#vidT");if(t)t.textContent=v.currentTime.toFixed(3)}
+function vidStep(d){const v=$("#lbVid");if(!v||v.style.display=="none")return;v.pause();v.currentTime=Math.max(0,Math.min(v.duration||1e9,v.currentTime+d))}
+function vidUse(){const v=$("#lbVid"),r=byN[cur];if(!r||!v||v.style.display=="none")return;const t=Math.round(v.currentTime*1000)/1000;st(r).pt=String(t);persist();const pi=$("#ptIn");if(pi)pi.value=t;document.querySelectorAll(".film img.on").forEach(i=>i.classList.remove("on"));toast("Frame set to "+t+"s")}
+function fkey(i){return i.replace(/[^\w.\-]/g,"_")}
+function pageHTML(r,s){return `<div class="kv" style="margin-top:8px"><b>Album page</b> (optional - pins this item to a wow page number)</div><div class="row"><input id="pgIn" size="5" value="${s.pg||""}" placeholder="e.g. 14"><button id="pgClr">Clear</button></div>`}
+function qrHTML(r,s){if(r.kind!="video"&&r.kind!="frame")return"";
+  return `<div class="kv" style="margin-top:8px"><label><input type="checkbox" id="qrChk" ${s.qr?"checked":""}> <b>Put a QR code for this video</b></label></div>`+(s.qr?`<div class="row"><input id="qrLab" style="width:100%" value="${(s.qt||"").replace(/"/g,"&quot;")}" placeholder="Label near the QR, e.g. ▶ הזיפליין"></div><div class="row"><input id="qrLink" style="width:100%" dir="ltr" value="${(s.ql||"").replace(/"/g,"&quot;")}" placeholder="Google Photos link (paste now or later)"></div>`:"")}
+function filmHTML(r,s){if(r.kind!="video")return"";const F=(window.FILM||{})[fkey(r.id)];
+  const cur=(s.pt===undefined||s.pt==="")?null:+s.pt;
+  let h=`<div class="kv" style="margin-top:8px"><b>Pick the frame for the album</b> (clip is ${Math.round(r.dur||0)}s)</div>`;
+  h+=`<div class="kv" id="vidMsg">Player: pause, then step with the buttons or the keys <b>,</b> (back) and <b>.</b> (forward); <b>Enter</b> = use this frame.</div><div class="row"><button data-vs="-1s">-1s</button><button data-vs="-1f">&#9664; frame</button><button data-vs="pp">Play/Pause</button><button data-vs="+1f">frame &#9654;</button><button data-vs="+1s">+1s</button></div><div class="row"><span class="kv">at <b id="vidT">0.000</b>s &nbsp; fps</span><select id="vidFps"><option>24</option><option>25</option><option selected>30</option><option>50</option><option>60</option></select><button id="vidUse" class="keep">Use this frame</button></div>`;
+  if(!F){h+=`<div class="kv">(Filmstrip not built - run <b>run_film.bat</b> for thumbnails.)</div>`}
+  else h+=`<div class="film">`+F.frames.map(f=>`<div><img data-pt="${f.t}" class="${cur!==null&&Math.abs(cur-f.t)<0.01?"on":""}" src="../film/${fkey(r.id)}/${f.f}"><span>${f.t}s</span></div>`).join("")+`</div>`;
+  h+=`<div class="row"><span class="kv">Exact second:</span><input id="ptIn" size="6" value="${cur===null?"":cur}" placeholder="e.g. 12.4"><button id="ptClr">Clear</button></div>`;
+  h+=`<div class="kv">Click a frame, or type any second. After you save decisions.json, run <b>run_picks.bat</b> to get full-resolution PNGs of your picks.</div>`;return h}
+function ctxHTML(n){const i=items.findIndex(r=>r.n==n);const a=items.slice(Math.max(0,i-6),i+7);
+  return a.map(r=>{const s=st(r);return `<div class="${s.d} ${r.n==n?"now":""}" data-cn="${r.n}" title="#${r.n} ${r.t_local.slice(5,16)} ${r.tier}"><img src="${img(r.thumb)}"><span>${r.kind=="video"?"&#9654; ":""}#${r.n} ${r.tier}</span></div>`}).join("")}
+function render2(){document.querySelectorAll(".card").forEach(c=>c.classList.toggle("focus",+c.dataset.n==cur))}
+function setDec(n,d){const r=byN[n];st(r).d=d;st(r).x=true;if(cur==n)open(n);else{counts();persist();refreshCard(n)}}
+function refreshCard(n){const old=document.querySelector(`.card[data-n="${n}"]`);if(old){const r=byN[n];if(shown().includes(r))old.replaceWith(card(r));else old.remove()}renderDays()}
+function nav(dir){const list=shown();const i=list.findIndex(r=>r.n==cur);const nx=list[i+dir];if(nx)open(nx.n)}
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".card");if(c&&view=="P"){const n=+c.dataset.n;
+    if(e.ctrlKey||e.shiftKey||e.metaKey){sel.has(n)?sel.delete(n):sel.add(n);c.classList.toggle("sel");renderBulk();return}
+    open(n);return}
+  const lb=e.target.closest("#lbSide");
+  const cn=e.target.closest("[data-cn]");if(cn){open(+cn.dataset.cn);return}
+  const vs=e.target.closest("[data-vs]");if(vs){const k=vs.dataset.vs,v=$("#lbVid"),fps=+($("#vidFps")||{}).value||30;if(k=="pp"){v.paused?v.play():v.pause()}else vidStep((k.endsWith("s")?1:1/fps)*(k[0]=="-"?-1:1));return}
+  if(e.target.id=="vidUse"){vidUse();return}
+  const fi=e.target.closest("[data-pt]");if(fi){st(byN[cur]).pt=fi.dataset.pt;persist();open(cur);return}
+  if(e.target.id=="lb"||e.target.id=="close"){stopVid();$("#lb").classList.remove("show");cur=null;render();return}
+  if(lb){const d=e.target.closest("[data-d]");if(d)setDec(cur,d.dataset.d);
+    const p=e.target.closest("[data-p]");if(p){const s=st(byN[cur]);s.p=s.p||[];const k=p.dataset.p;s.p=s.p.includes(k)?s.p.filter(x=>x!=k):[...s.p,k];open(cur);persist()}
+    if(e.target.id=="prev")nav(-1);if(e.target.id=="next")nav(1)}
+  const bd=e.target.closest("[data-bd]");if(bd){sel.forEach(n=>{st(byN[n]).d=bd.dataset.bd;st(byN[n]).x=true});sel.clear();render()}
+  const bp=e.target.closest("[data-bp]");if(bp){sel.forEach(n=>{const s=st(byN[n]);s.p=s.p||[];if(!s.p.includes(bp.dataset.bp))s.p.push(bp.dataset.bp)});toast("Tagged "+sel.size+" as "+bp.dataset.bp);sel.clear();render()}
+  if(e.target.id=="bulkClear"){sel.clear();render()}});
+let hov=null;document.addEventListener("mouseover",e=>{const c=e.target.closest(".card");hov=c?+c.dataset.n:null});
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName=="TEXTAREA"||e.target.tagName=="INPUT")return;
+  if((e.ctrlKey||e.metaKey)&&e.key=="s"){e.preventDefault();saveFile();return}
+  const open_=$("#lb").classList.contains("show");const tgt=open_?cur:hov;
+  if(e.key=="Escape"&&open_){stopVid();$("#lb").classList.remove("show");cur=null;render()}
+  else if(open_&&(e.key==","||e.key==".")){vidStep((e.key==","?-1:1)/(+($("#vidFps")||{}).value||30))}
+  else if(open_&&e.key=="Enter"&&byN[cur]&&byN[cur].kind=="video"){vidUse()}
+  else if(open_&&e.key=="ArrowRight")nav(1);else if(open_&&e.key=="ArrowLeft")nav(-1);
+  else if(tgt&&["1","2","3"].includes(e.key))setDec(tgt,["keep","maybe","cut"][+e.key-1]);
+  else if(tgt){const p=PEOPLE.find(p=>p[0][0].toLowerCase()==e.key.toLowerCase()&&e.shiftKey);if(p){const s=st(byN[tgt]);s.p=s.p||[];s.p=s.p.includes(p[0])?s.p.filter(x=>x!=p[0]):[...s.p,p[0]];open_?open(tgt):(persist(),refreshCard(tgt))}}});
+/* frames tab */
+function renderFrames(){const m=$("#main");m.innerHTML=`<p class="hint">Each snapshot you took from a video is matched to its source video and the exact second. <b class="conf-high">High</b> = very likely right, <b class="conf-ok">OK</b> = probably, <b class="conf-low">Low</b> = please check. Choose what to do with it; if the match is wrong, type the correct video's # (from the Photos tab).</p>`;
+  frames.slice().sort((a,b)=>(a.t_local||"z").localeCompare(b.t_local||"z")).forEach(f=>{
+   const s=S.frames[f.id]||(S.frames[f.id]={d:"maybe",src:f.src_n||"",c:""});const src=byN[s.src];
+   const div=document.createElement("div");div.className="frame";
+   div.innerHTML=`<img src="${img(f.thumb)}"><div class="info"><b>${f.name}</b><br>
+    Match: <b class="conf-${f.match_conf||"low"}">${(f.match_conf||"low").toUpperCase()}</b> (${f.match_score||"-"}) &rarr; video <b>#${s.src||"?"}</b> at <b>${f.src_t!=null?f.src_t+"s":"?"}</b><br>
+    ${f.note?`<i>${f.note}</i><br>`:""}Time: ${f.t_local?f.t_local.replace("T"," "):"unknown"} &middot; Place: ${f.place||"?"}<br>
+    <div class="row"><button data-fd="keep" class="${s.d=="keep"?"on":""}">Use in album</button><button data-fd="maybe" class="${s.d=="maybe"?"on":""}">Maybe</button><button data-fd="cut" class="${s.d=="cut"?"on":""}">Drop</button>
+    <span class="kv">source video #</span><input size=5 value="${s.src||""}" data-fs="1"></div></div>
+    ${src?`<img src="${img(src.strip||src.thumb)}" style="height:90px;align-self:center" title="source video #${src.n}">`:""}`;
+   div.querySelectorAll("[data-fd]").forEach(b=>b.onclick=()=>{s.d=b.dataset.fd;counts();persist();renderFrames()});
+   div.querySelector("[data-fs]").onchange=e=>{s.src=e.target.value.trim();persist();renderFrames()};
+   m.appendChild(div)})}
+function renderNoTime(){const m=$("#main");m.innerHTML=`<p class="hint">These ${notime.length} files carry no date (probably forwarded/WhatsApp copies). Tell me roughly when each belongs: pick the photo # it should sit next to.</p>`;
+  notime.forEach(f=>{const s=S.notime[f.id]||(S.notime[f.id]={after:"",d:"maybe",c:""});const div=document.createElement("div");div.className="frame";
+   div.innerHTML=`<img src="${img(f.thumb)}"><div class="info"><b>${f.name}</b> (${f.kind})<br><div class="row"><button data-nd="keep" class="${s.d=="keep"?"on":""}">Keep</button><button data-nd="maybe" class="${s.d=="maybe"?"on":""}">Maybe</button><button data-nd="cut" class="${s.d=="cut"?"on":""}">Cut</button><span class="kv">place after photo #</span><input size=5 value="${s.after||""}" data-na="1"></div></div>`;
+   div.querySelectorAll("[data-nd]").forEach(b=>b.onclick=()=>{s.d=b.dataset.nd;persist();renderNoTime()});
+   div.querySelector("[data-na]").onchange=e=>{s.after=e.target.value.trim();persist()};m.appendChild(div)})}
+/* persistence to folder */
+function toast(t){const e=$("#toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",2800)}
+async function saveFile(){const out=JSON.stringify({saved:new Date().toISOString(),people:PEOPLE,items:S.items,frames:S.frames,notime:S.notime},null,1);
+  try{if(window.showSaveFilePicker){const h=await showSaveFilePicker({suggestedName:"decisions.json",id:"caravan",types:[{description:"JSON",accept:{"application/json":[".json"]}}]});const w=await h.createWritable();await w.write(out);await w.close();toast("Saved decisions.json");return}}catch(e){if(e.name=="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([out],{type:"application/json"}));a.download="decisions.json";a.click();toast("Downloaded decisions.json - put it in the _album folder")}
+function tabs(){$("#tabP").classList.toggle("on",view=="P");$("#tabF").classList.toggle("on",view=="F");$("#tabN").classList.toggle("on",view=="N")}
+$("#tabP").onclick=()=>{view="P";tabs();render()};$("#tabF").onclick=()=>{view="F";tabs();render()};$("#tabN").onclick=()=>{view="N";tabs();render()};
+["fTier","fKind","fDec","fPpl"].forEach(id=>{$("#"+id).onchange=e=>{filt[{fTier:"tier",fKind:"kind",fDec:"dec",fPpl:"ppl"}[id]]=e.target.value;const a=cur||lastN;render();if(a){const c=document.querySelector(`.card[data-n="${a}"]`);if(c)c.scrollIntoView({block:"center"})}}});
+PEOPLE.forEach(p=>{const o=document.createElement("option");o.value=p[0];o.textContent=p[0]+" "+p[1];$("#fPpl").appendChild(o)});
+function xBulk(to){const l=items.filter(r=>r.tier=="X"&&!r.dup_of&&!st(r).x&&st(r).d==(to=="maybe"?"cut":"maybe"));
+  if(!l.length){toast("Nothing to change");return}
+  if(!confirm(l.length+" of my suggested cuts will become "+(to=="maybe"?"Maybe":"Cut")+" (still counted as not reviewed by you). Continue?"))return;
+  l.forEach(r=>st(r).d=to);render();toast(l.length+" changed")}
+$("#xMaybe").onclick=()=>xBulk("maybe");$("#xReset").onclick=()=>xBulk("cut");
+$("#showSoft").onchange=render;$("#save").onclick=saveFile;
+render();
+</script>
+</body>
+</html>

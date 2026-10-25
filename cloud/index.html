@@ -1,0 +1,401 @@
+<title>Caravan Album Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: contact-sheet grid grouped by trip day; days rail on desktop, swipe row on phone; viewer = photo + decision panel */
+:root{
+  --bg:#13161b;--panel:#1c2027;--panel2:#252a33;--line:#2e343f;--fg:#e9ebef;--mut:#8f97a5;
+  --keep:#2fb36d;--maybe:#e0a526;--cut:#d9534f;--acc:#4c8dff;--accfg:#fff;--shade:rgba(0,0,0,.62);--scrim:rgba(6,8,11,.92);
+  --ui:"Rubik",system-ui,"Segoe UI",Arial,sans-serif;--num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f3f4f6;--panel:#ffffff;--panel2:#e9ecf1;--line:#d6dae1;--fg:#1b1f26;--mut:#5d6573;
+  --keep:#1f8f53;--maybe:#b67f09;--cut:#c0392b;--acc:#2f6fe0;--accfg:#fff;--shade:rgba(0,0,0,.55);--scrim:rgba(20,24,30,.9);color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f3f4f6;--panel:#ffffff;--panel2:#e9ecf1;--line:#d6dae1;--fg:#1b1f26;--mut:#5d6573;
+  --keep:#1f8f53;--maybe:#b67f09;--cut:#c0392b;--acc:#2f6fe0;--accfg:#fff;--shade:rgba(0,0,0,.55);--scrim:rgba(20,24,30,.9);color-scheme:light}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--ui)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+button,select,input,textarea{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}button:hover{border-color:var(--mut)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.card:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.on{background:var(--acc);border-color:var(--acc);color:var(--accfg)}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line);
+  padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:8px}
+.hrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0 6px 0 0;font-weight:700;letter-spacing:.01em}
+.stat{padding:3px 9px;border-radius:12px;background:var(--panel2);font-size:12px;white-space:nowrap}
+.k{color:var(--keep)}.m{color:var(--maybe)}.c{color:var(--cut)}
+.sync{font-size:12px;color:var(--mut);display:inline-flex;align-items:center;gap:6px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--mut);display:inline-block}
+.sync.ok i{background:var(--keep)}.sync.busy i{background:var(--maybe)}.sync.err i{background:var(--cut)}
+.spacer{flex:1}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters select{max-width:100%;min-width:0}
+#fToggle{display:none}
+.layout{display:flex;align-items:flex-start}
+aside{width:212px;flex:none;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hh,96px));max-height:calc(100vh - var(--hh,96px));overflow:auto;padding:10px;border-right:1px solid var(--line);background:var(--panel)}
+aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:12px 0 6px;font-weight:500}
+#days{display:flex;flex-direction:column;gap:4px}
+.day{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;white-space:nowrap}
+.day small{color:var(--mut);font-family:var(--num);font-size:11px}
+.day.on small{color:var(--accfg)}
+main{flex:1;padding-block:12px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-width:0}
+.dayhead{margin:18px 0 8px;font-size:15px;font-weight:700;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.dayhead span{font-weight:400;color:var(--mut);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.card{position:relative;background:var(--panel);border:2px solid transparent;border-radius:8px;overflow:hidden;cursor:pointer;min-width:0}
+.card img{display:block;width:100%;height:128px;object-fit:cover;background:var(--panel2)}
+.card .meta{padding:4px 6px;font-size:11px;color:var(--mut);display:flex;justify-content:space-between;gap:4px;font-family:var(--num)}
+.card .meta b{color:var(--fg)}
+.card .place{padding:0 6px 5px;font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.keep{border-color:var(--keep)}.card.maybe{border-color:var(--maybe)}.card.cut{border-color:var(--line);opacity:.45}
+.card.sel{outline:3px solid var(--acc)}.card.focus{box-shadow:0 0 0 3px var(--fg)}
+.badge{position:absolute;top:4px;left:4px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:var(--shade);color:#fff}
+.badge.v{background:#c0392b}.badge.l{left:auto;right:4px;background:#2563eb}
+.badge.mt{top:22px;left:auto;right:4px;background:#7c3aed}
+.badge.qr{top:40px;background:#111;border:1px solid #fff}
+.badge.pg{top:40px;left:auto;right:4px;background:#0a7}
+.badge.fr{top:22px;background:#0a7}
+.ppl{position:absolute;bottom:44px;left:4px;display:flex;gap:2px}
+.ppl i{font-style:normal;background:var(--shade);color:#fff;border-radius:3px;padding:0 4px;font-size:10px}
+.soft{position:absolute;bottom:44px;right:4px;background:#e0a526;color:#000;border-radius:3px;padding:0 4px;font-size:10px;font-weight:700}
+.bulk{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);
+  padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;z-index:30}
+.lb{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.lbin{margin:auto;width:min(1120px,96vw);max-height:94vh;background:var(--panel);border-radius:10px;display:flex;overflow:hidden}
+.lbimg{flex:1;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:8px 0;touch-action:pan-y}
+.lbimg>img{max-width:100%;max-height:66vh;object-fit:contain}
+.lbimg .strip{max-height:96px;margin-top:6px}
+.lbside{width:340px;flex:none;padding:14px;overflow:auto;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 11px;border-radius:14px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);user-select:none}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--accfg)}
+.dec button{flex:1;padding:9px 6px}
+.dec .keep.on{background:var(--keep);border-color:var(--keep);color:#fff}.dec .maybe.on{background:var(--maybe);border-color:var(--maybe);color:#000}.dec .cut.on{background:var(--cut);border-color:var(--cut);color:#fff}
+textarea{width:100%;min-height:64px;direction:rtl;text-align:right}
+.kv{font-size:12px;color:var(--mut)}.kv b{color:var(--fg);font-weight:500}
+.kv a{color:var(--acc)}
+.drv{display:inline-block;padding:6px 12px;border-radius:6px;background:var(--acc);color:var(--accfg);text-decoration:none;font-size:13px;font-weight:500}
+.info .drv{padding:1px 8px;font-size:11px}
+.sec{font-size:12px;font-weight:700;margin-top:4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.frame{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;align-items:flex-start;flex-wrap:wrap}
+.frame img{height:110px;border-radius:4px;max-width:100%}
+.frame .info{flex:1;font-size:12px;min-width:200px}
+.conf-high{color:var(--keep)}.conf-ok{color:var(--maybe)}.conf-low{color:var(--cut)}
+.hint{color:var(--mut);font-size:12px;margin:4px 0 10px;max-width:70ch}
+.film{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.film div{position:relative}
+.film img{width:100%;aspect-ratio:16/9;object-fit:cover;border:2px solid transparent;border-radius:4px;cursor:pointer;display:block;background:var(--panel2)}
+.film img.on{border-color:var(--keep)}
+.film span{position:absolute;bottom:3px;left:4px;background:var(--shade);color:#fff;font-size:10px;padding:0 3px;border-radius:3px;font-family:var(--num)}
+.pill{display:inline-block;padding:0 6px;border-radius:8px;background:var(--panel2);color:var(--acc);font-size:11px}
+.ctx{display:flex;gap:4px;margin-top:8px;padding:0 6px;max-width:100%;overflow:auto}
+.ctx div{flex:none;position:relative;border:3px solid var(--line);border-radius:5px;cursor:pointer}
+.ctx div.keep{border-color:var(--keep)}.ctx div.maybe{border-color:var(--maybe)}.ctx div.cut{border-color:var(--cut);opacity:.5}.ctx div.now{outline:3px solid #fff}
+.ctx img{display:block;height:60px;width:80px;object-fit:cover;border-radius:2px;background:#222}
+.ctx span{position:absolute;bottom:0;left:0;background:var(--shade);color:#fff;font-size:9px;padding:0 3px}
+.toast{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border:1px solid var(--line);padding:8px 14px;border-radius:8px;z-index:90;max-width:calc(100vw - 32px)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0;display:flex;flex-direction:column;gap:8px;max-width:640px}
+.navbtns{display:none}
+@media (max-width:820px){
+  header{position:static}
+  body::before{background:var(--bg)}
+  #fToggle{display:inline-block}
+  .filters{display:none}.filters.open{display:flex}
+  .filters select{flex:1 1 45%}
+  .layout{display:block}
+  aside{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;width:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding-block:6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  aside h3,aside .deskonly{display:none}
+  #days{flex-direction:row;overflow-x:auto;scrollbar-width:none}
+  .day{width:auto;flex:none}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+  .card img{height:104px}
+  .card .place{display:none}
+  .lbin{width:100vw;max-height:none;height:100%;border-radius:0;flex-direction:column;overflow:auto;margin:0}
+  .lbimg{flex:none;padding:6px 0}
+  .lbimg>img{max-height:48vh}
+  .lbside{width:auto;border-left:0;border-top:1px solid var(--line);overflow:visible}
+  .navbtns{display:flex;position:sticky;top:0;z-index:2;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .navbtns button{flex:1}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<header id="hdr">
+  <div class="hrow">
+    <h1>Caravan Album Review</h1>
+    <span class="sync busy" id="sync"><i></i><span id="syncT">Connecting…</span></span>
+    <span class="spacer"></span>
+    <button id="selMode" title="Tap photos to select several, then decide or tag them together">Select</button>
+    <button id="fToggle">Filters</button>
+    <button id="more">Import / export</button>
+  </div>
+  <div class="hrow">
+    <div class="tabs"><button id="tabP" class="on">Photos &amp; videos</button><button id="tabF">Your <span id="nF">66</span> frames</button><button id="tabN">No timestamp</button></div>
+    <span class="stat" title="Items you decided yourself">Reviewed <b class="num" id="sR">0</b></span>
+    <span class="stat k">Keep <b class="num" id="sK">0</b></span><span class="stat m">Maybe <b class="num" id="sM">0</b></span><span class="stat c">Cut <b class="num" id="sC">0</b></span>
+    <span class="stat" title="About 4.5 images per page, both sides, collage style">~<b class="num" id="sP">0</b> pages</span>
+  </div>
+  <div class="filters" id="filters">
+    <select id="fTier" aria-label="Claude's suggestion"><option value="">All suggestions</option><option value="notX">All except my suggested cuts (A+B+C)</option><option value="A">My heroes (A)</option><option value="B">My strong (B)</option><option value="C">My maybes (C)</option><option value="X">My suggested cuts (X)</option><option value="diff">Where you changed my mind</option></select>
+    <select id="fKind" aria-label="Type"><option value="">Photos, videos, maps</option><option value="photo">Photos only</option><option value="video">Videos only</option><option value="map">Maps only</option></select>
+    <select id="fDec" aria-label="Decision"><option value="">Any decision</option><optgroup label="Decided by you"><option value="ykeep">Your Keeps</option><option value="ymaybe">Your Maybes</option><option value="ycut">Your Cuts</option></optgroup><option value="unrev">Not reviewed by you yet</option><optgroup label="Marks"><option value="qr">Videos marked for QR</option><option value="pinned">Pinned to an album page</option></optgroup><optgroup label="Current state"><option value="keep">Keep</option><option value="maybe">Maybe</option><option value="cut">Cut</option></optgroup></select>
+    <select id="fPpl" aria-label="Person"><option value="">Anyone</option></select>
+    <label class="kv" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="showSoft" checked> Flag soft photos</label>
+  </div>
+</header>
+<div class="layout">
+<aside>
+  <h3>Days</h3><div id="days"></div>
+  <div class="deskonly">
+    <h3>People</h3><div id="peopleKey" class="kv"></div>
+    <h3>Keys</h3>
+    <div class="kv">Click = open · Ctrl/Shift+click = select<br>1 keep · 2 maybe · 3 cut (hover or open)<br>Shift+initial = tag person<br>Arrows = prev/next · Esc = close</div>
+  </div>
+</aside>
+<main id="main"><p class="hint">Loading the trip…</p></main>
+</div>
+<div class="bulk" id="bulk" hidden>
+  <b id="bulkN"></b>
+  <button data-bd="keep" class="k">Keep</button><button data-bd="maybe" class="m">Maybe</button><button data-bd="cut" class="c">Cut</button>
+  <span class="kv">Tag:</span><span id="bulkPpl" class="row"></span>
+  <button id="bulkClear">Clear</button>
+</div>
+<div class="lb" id="lb" hidden><div class="lbin">
+  <div class="navbtns"><button id="mPrev">← Prev</button><button id="mClose">Close</button><button id="mNext">Next →</button></div>
+  <div class="lbimg" id="lbImgWrap"><img id="lbImg" alt=""><img id="lbStrip" class="strip" alt=""><div class="ctx" id="lbCtx"></div></div>
+  <div class="lbside" id="lbSide"></div>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="data.js"></script>
+<script src="film.js"></script>
+<script src="manifest.js"></script>
+<script src="drive.js"></script>
+<script>
+const PEOPLE=[["Eran","ערן"],["Liat","ליאת"],["Omer","עומר"],["Zohar","זוהר"],["Idan","עידן"],["Friends","חברים"],["Strangers","זרים"]];
+const D=window.DATA,FILM=window.FILM||{},MAN=window.MAN||{},DRV=window.DRIVE||{};
+const drvLink=(name,label)=>DRV[name]?`<a class="drv" target="_blank" rel="noopener" href="https://drive.google.com/file/d/${DRV[name]}/view">${label||"Open full resolution in Drive ↗"}</a>`:"";
+const items=D.items.slice().sort((a,b)=>a.t_local.localeCompare(b.t_local)||a.n-b.n),frames=D.frames,notime=D.notime;
+const byN={};items.forEach(r=>byN[r.n]=r);
+const dayOf=n=>byN[n].t_local.slice(0,10);
+const tierDef={A:"keep",B:"keep",C:"maybe",X:"cut"};
+const LKEY="caravan_cloud_cache_v1";
+let S={items:{},frames:{},notime:{}};
+try{const raw=localStorage.getItem(LKEY);if(raw){const c=JSON.parse(raw);S.items=c.items||{};S.frames=c.frames||{};S.notime=c.notime||{}}}catch(e){}
+function st(r){let s=S.items[r.n];if(!s){s=S.items[r.n]={d:tierDef[r.tier]||"cut",p:[],c:"",x:false}}return s}
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let filt={day:"",tier:"",kind:"",dec:"",ppl:""},sel=new Set(),cur=null,lastN=null,view="P",selMode=false;
+const days=[...new Set(items.map(r=>r.t_local.slice(0,10)))];
+const DN=d=>new Date(d+"T12:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+$("#nF").textContent=frames.length;
+
+/* ---------- images from per-day packs ---------- */
+const packs={},urls={};
+function pack(fn){return packs[fn]||(packs[fn]=fetch(fn).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer()}).catch(e=>{delete packs[fn];throw e}))}
+function imgURL(k){if(!k||!MAN[k])return Promise.resolve("");if(urls[k])return urls[k];const m=MAN[k];
+  return urls[k]=pack(m[0]).then(b=>URL.createObjectURL(new Blob([new Uint8Array(b,m[1],m[2])],{type:m[3]}))).catch(e=>{delete urls[k];throw e})}
+function setImg(el){const k=el.dataset.k;imgURL(k).then(u=>{if(u&&el.dataset.k===k)el.src=u}).catch(()=>{el.alt="image failed to load"})}
+const io=("IntersectionObserver" in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){io.unobserve(e.target);setImg(e.target)}}),{rootMargin:"800px 0px"}):null;
+function hydrate(root){root.querySelectorAll("img[data-k]").forEach(el=>{if(el.dataset.done)return;el.dataset.done=1;io?io.observe(el):setImg(el)})}
+function showImg(el,k){el.removeAttribute("src");el.dataset.k=k||"";if(k)setImg(el)}
+const fkey=i=>i.replace(/[^\w.\-]/g,"_");
+const filmK=(r,f)=>"film/"+fkey(r.id)+"/"+f;
+
+/* ---------- cloud sync ---------- */
+let db=null,downloads=null;const pend=new Map(),chains={},pendKeys=new Set();
+function setSync(cls,t){const e=$("#sync");e.className="sync "+cls;$("#syncT").textContent=t}
+function cacheLocal(){try{localStorage.setItem(LKEY,JSON.stringify({items:S.items,frames:S.frames,notime:S.notime}))}catch(e){}}
+function docFor(kind,key){return kind=="i"?"days/"+dayOf(key):kind=="f"?"extra/frames":"extra/notime"}
+function mapFor(kind){return kind=="i"?S.items:kind=="f"?S.frames:S.notime}
+let saveT=null;
+function mark(kind,key,delay){cacheLocal();const path=docFor(kind,key);if(!pend.has(path))pend.set(path,new Set());pend.get(path).add(key);pendKeys.add(kind+key);
+  clearTimeout(saveT);saveT=setTimeout(flush,delay||250);if(db)setSync("busy","Saving…")}
+function flush(){if(!db){setSync("err","Not syncing – kept on this device");return}
+  for(const [path,keys] of pend){pend.delete(path);const kind=path.startsWith("days/")?"i":path=="extra/frames"?"f":"t";const M=mapFor(kind);
+    const field=kind=="i"?"items":"f";const patch={};keys.forEach(k=>patch[k]=M[k]);
+    chains[path]=(chains[path]||Promise.resolve()).then(()=>db.doc(path).update({[field]:patch}).catch(e=>{
+      if(e&&e.code==="invalid_argument"){const full={};if(kind=="i"){const d=path.slice(5);items.forEach(r=>{if(dayOf(r.n)==d&&S.items[r.n])full[r.n]=S.items[r.n]})}else Object.assign(full,M);return db.doc(path).set({[field]:full})}throw e}))
+      .then(()=>{keys.forEach(k=>pendKeys.delete(kind+k));if(!pend.size)setSync("ok","Saved to cloud")})
+      .catch(e=>{setSync("err",e&&e.code==="quota_exceeded"?"Cloud storage full":"Save failed – will retry");keys.forEach(k=>{if(!pend.has(path))pend.set(path,new Set());pend.get(path).add(k)});clearTimeout(saveT);saveT=setTimeout(flush,5000)})}}
+function applyRemote(kind,map){const M=mapFor(kind);const changed=[];
+  for(const k in map){if(pendKeys.has(kind+k))continue;const v=JSON.stringify(map[k]);if(JSON.stringify(M[k])!==v){M[k]=JSON.parse(v);changed.push(k)}}return changed}
+let firstSnap=true;
+async function connect(){
+  try{db=await window.claude.use("db")}catch(e){db=null}
+  try{downloads=await window.claude.use("downloads")}catch(e){downloads=null}
+  if(!db){setSync("err","Offline – choices stay on this device");return}
+  db.collection("days").onSnapshot(snap=>{let ch=[];snap.docs.forEach(d=>{const b=d.data();if(b&&b.items)ch=ch.concat(applyRemote("i",b.items))});
+      if(firstSnap){firstSnap=false;render();setSync("ok",snap.empty?"Cloud is empty – import decisions.json":"Synced")}else if(ch.length)remoteRefresh(ch);cacheLocal()},
+    e=>setSync("err","Sync stopped – reload the page"));
+  db.collection("extra").onSnapshot(snap=>{let ch=0;snap.docs.forEach(d=>{const b=d.data()||{};if(d.id=="frames"&&b.f)ch+=applyRemote("f",b.f).length;if(d.id=="notime"&&b.f)ch+=applyRemote("t",b.f).length});
+      if(ch&&view!="P")render();cacheLocal()},()=>{});
+}
+function remoteRefresh(ns){counts();if(cur!=null&&ns.includes(String(cur))){const a=document.activeElement;if(!(a&&(a.tagName=="TEXTAREA"||a.tagName=="INPUT")))open(cur)}
+  if(view=="P")ns.forEach(n=>refreshCard(+n));renderDays()}
+
+/* ---------- main views ---------- */
+function counts(){let k=0,m=0,c=0;items.forEach(r=>{const d=st(r).d;if(d=="keep")k++;else if(d=="maybe")m++;else c++});
+  frames.forEach(f=>{const s=S.frames[f.id];if(s&&s.d=="keep")k++});
+  $("#sR").textContent=items.filter(r=>st(r).x).length;$("#sK").textContent=k;$("#sM").textContent=m;$("#sC").textContent=c;$("#sP").textContent=Math.round(k/4.5)}
+function shown(){return items.filter(r=>{const s=st(r);
+  if(filt.day&&r.t_local.slice(0,10)!=filt.day)return false;
+  if(filt.kind&&r.kind!=filt.kind)return false;
+  if(filt.dec){const f=filt.dec;if(f=="qr"){if(!s.qr)return false}else if(f=="pinned"){if(!s.pg)return false}else if(f=="unrev"){if(s.x)return false}else if(f[0]=="y"){if(!s.x||s.d!=f.slice(1))return false}else if(s.d!=f)return false}
+  if(filt.tier=="diff"){if(s.d==(tierDef[r.tier]||"cut"))return false}else if(filt.tier=="notX"){if(r.tier=="X")return false}else if(filt.tier&&r.tier!=filt.tier)return false;
+  if(filt.ppl&&!(s.p||[]).includes(filt.ppl))return false;return true})}
+function card(r){const s=st(r);const el=document.createElement("div");
+  el.className="card "+s.d+(sel.has(r.n)?" sel":"")+(cur==r.n||lastN==r.n?" focus":"");el.dataset.n=r.n;el.tabIndex=0;
+  const ppl=(s.p||[]).map(p=>"<i>"+p[0]+"</i>").join("");
+  let k=r.thumb;const F=FILM[fkey(r.id)];if(r.kind=="video"&&F&&s.pt!==undefined&&s.pt!==""){const f=F.frames.reduce((a,b)=>Math.abs(b.t-s.pt)<Math.abs(a.t-s.pt)?b:a);k=filmK(r,f.f)}
+  el.innerHTML=`<img alt="" data-k="${esc(k)}">`+
+   (r.kind=="video"?`<span class="badge v">▶ ${Math.round(r.dur||0)}s</span>`:"")+(r.live?`<span class="badge l">LIVE</span>`:"")+(r.matched?`<span class="badge mt">MATCHED</span>`:"")+(s.qr?`<span class="badge qr">QR</span>`:"")+(s.pg?`<span class="badge pg">p${esc(s.pg)}</span>`:"")+(s.pt!==undefined&&s.pt!==""?`<span class="badge fr">frame ${esc(s.pt)}s</span>`:"")+
+   (ppl?`<div class="ppl">${ppl}</div>`:"")+(($("#showSoft").checked&&r.kind=="photo"&&r.sharp<450)?`<span class="soft">soft</span>`:"")+
+   `<div class="meta"><b>#${r.n}${s.x?" ✓":""}</b><span>${r.t_local.slice(11,16)}</span><span>${r.tier}</span></div><div class="place">${esc(r.place||"?")}${r.loc_src&&r.loc_src!="gps"?" *":""}</div>`;
+  return el}
+function render(){counts();const m=$("#main");m.innerHTML="";
+  if(view=="P"){const list=shown();let last="",grid;const frag=document.createDocumentFragment();
+    list.forEach(r=>{const day=r.t_local.slice(0,10);if(day!=last){last=day;const n=list.filter(x=>x.t_local.slice(0,10)==day);
+      const h=document.createElement("div");h.className="dayhead";const kc=n.filter(x=>st(x).d=="keep").length;
+      h.innerHTML=`${DN(day)} <span>${n.length} shown · keep ${kc} · ${esc([...new Set(n.map(x=>x.place).filter(Boolean))].slice(0,5).join(" → "))}</span>`;frag.appendChild(h);grid=document.createElement("div");grid.className="grid";frag.appendChild(grid)}
+      grid.appendChild(card(r))});
+    m.appendChild(frag);if(!list.length)m.innerHTML="<p class=hint>Nothing matches these filters.</p>";
+  }else if(view=="F")renderFrames();else if(view=="N")renderNoTime();else renderIO();
+  hydrate(m);renderDays();renderBulk()}
+function renderDays(){const dv=$("#days");dv.innerHTML="";
+  const mk=(d,label,k,n)=>{const b=document.createElement("button");b.className="day"+(filt.day==d?" on":"");b.innerHTML=`${label} <small>${k}/${n}</small>`;b.onclick=()=>{filt.day=d;view="P";tabs();render();scrollTo(0,0)};dv.appendChild(b)};
+  mk("","All days",items.filter(r=>st(r).d=="keep").length,items.length);
+  days.forEach(d=>{const n=items.filter(r=>r.t_local.slice(0,10)==d);mk(d,DN(d),n.filter(r=>st(r).d=="keep").length,n.length)});
+  const on=dv.querySelector(".on");if(on&&dv.scrollWidth>dv.clientWidth)on.scrollIntoView({inline:"center",block:"nearest"});
+  $("#peopleKey").innerHTML=PEOPLE.map(p=>`<span>${p[0]} <b>${p[1]}</b> (${p[0][0]})</span>`).join("<br>")}
+function renderBulk(){const b=$("#bulk");b.hidden=sel.size==0;$("#bulkN").textContent=sel.size+" selected";
+  $("#bulkPpl").innerHTML=PEOPLE.map(p=>`<span class="chip" data-bp="${p[0]}">${p[0]}</span>`).join("")}
+
+/* ---------- viewer ---------- */
+function open(n){cur=n;lastN=n;const r=byN[n];if(!r)return;const s=st(r);$("#lb").hidden=false;document.body.style.overflow="hidden";
+  let k=r.thumb;const F=FILM[fkey(r.id)];if(F&&s.pt!==undefined&&s.pt!==""){const f=F.frames.reduce((a,b)=>Math.abs(b.t-s.pt)<Math.abs(a.t-s.pt)?b:a);k=filmK(r,f.f)}
+  showImg($("#lbImg"),k);const strip=$("#lbStrip");strip.hidden=!r.strip;if(r.strip)showImg(strip,r.strip);
+  const note=(r.note||r.dup_of||r.conf)?`<div class="kv">${r.conf?`<span class="pill">match: ${esc(r.conf)}</span> `:""}${r.dup_of?`<b>Duplicate of #${r.dup_of}</b> `:""}${esc(r.note||"")}</div>`:"";
+  const live=r.live?`<div class="kv">Live Photo clip paired: <b>${esc(r.live)}</b></div>`:"";
+  const gps=(r.lat!=null)?`<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=14/${r.lat}/${r.lon}">${(+r.lat).toFixed(4)}, ${(+r.lon).toFixed(4)}</a>`:"none";
+  $("#lbSide").innerHTML=`<div class="kv" style="font-size:15px"><b>#${r.n}</b> · ${r.kind}${r.kind=="video"?" "+Math.round(r.dur||0)+"s":""} · my suggestion: <b>${r.tier}</b></div>
+   <div class="kv num">${esc(r.name)}</div>${drvLink(r.name)?`<div>${drvLink(r.name)}</div>`:""}${r.live&&DRV[r.live]?`<div>${drvLink(r.live,"Live Photo clip in Drive ↗")}</div>`:""}
+   <div class="kv">Time: <b class="num">${r.t_local.replace("T"," ")}</b> <i>(${esc(r.t_src||"")})</i></div>
+   <div class="kv">Place: <b>${esc(r.place||"?")}${r.cc?" ("+r.cc+")":""}</b> ${r.loc_src&&r.loc_src!="gps"?"<i>(inferred: "+esc(r.loc_src)+")</i>":""}<br>GPS: ${gps}</div>
+   <div class="kv">Device: <b>${esc(r.device||"unknown")}</b> · sharpness <b class="num">${Math.round(r.sharp)}</b></div>${live}${note}
+   <div class="row dec"><button class="keep ${s.d=="keep"?"on":""}" data-d="keep">Keep (1)</button><button class="maybe ${s.d=="maybe"?"on":""}" data-d="maybe">Maybe (2)</button><button class="cut ${s.d=="cut"?"on":""}" data-d="cut">Cut (3)</button></div>
+   <div class="sec">Who is in it</div><div class="row">${PEOPLE.map(p=>`<span class="chip ${(s.p||[]).includes(p[0])?"on":""}" data-p="${p[0]}">${p[0]}</span>`).join("")}</div>
+   ${filmHTML(r,s)}${extraHTML(r,s)}
+   <div class="sec">Caption / fun fact (Hebrew OK)</div><textarea id="cap" placeholder="...">${esc(s.c||"")}</textarea>
+   <div class="row"><button id="prev">← Prev</button><button id="next">Next →</button><button id="close">Close</button></div>`;
+  hydrate($("#lbSide"));
+  const pi=$("#ptIn");if(pi)pi.onchange=e=>{st(r).pt=e.target.value.trim();mark("i",r.n);open(cur);refreshCard(r.n)};const pc=$("#ptClr");if(pc)pc.onclick=()=>{st(r).pt="";mark("i",r.n);open(cur);refreshCard(r.n)};
+  $("#lbCtx").innerHTML=ctxHTML(r.n);hydrate($("#lbCtx"));const cx=document.querySelector("#lbCtx .now");if(cx)cx.scrollIntoView({inline:"center",block:"nearest"});
+  const pg=$("#pgIn");if(pg)pg.onchange=e=>{const v=e.target.value.trim();st(r).pg=v?parseInt(v)||"":"";mark("i",r.n);open(cur);refreshCard(r.n)};const pgc=$("#pgClr");if(pgc)pgc.onclick=()=>{st(r).pg="";mark("i",r.n);open(cur);refreshCard(r.n)};
+  const qc=$("#qrChk");if(qc)qc.onchange=e=>{st(r).qr=e.target.checked;mark("i",r.n);open(cur);refreshCard(r.n)};const ql=$("#qrLink");if(ql)ql.onchange=e=>{st(r).ql=e.target.value.trim();mark("i",r.n)};const qt=$("#qrLab");if(qt)qt.onchange=e=>{st(r).qt=e.target.value.trim();mark("i",r.n)};
+  $("#cap").oninput=e=>{st(r).c=e.target.value;mark("i",r.n,900)};
+  document.querySelectorAll(".card.focus").forEach(c=>c.classList.remove("focus"));const cc=document.querySelector(`.card[data-n="${n}"]`);if(cc)cc.classList.add("focus")}
+function closeLB(){$("#lb").hidden=true;document.body.style.overflow="";const n=cur;cur=null;const c=document.querySelector(`.card[data-n="${n}"]`);if(c){c.scrollIntoView({block:"nearest"})}}
+function extraHTML(r,s){let h=`<div class="sec">Album page <span class="kv">(optional – pins this item to a wow page)</span></div><div class="row"><input id="pgIn" size="5" inputmode="numeric" value="${esc(s.pg||"")}" placeholder="e.g. 14"><button id="pgClr">Clear</button></div>`;
+  if(r.kind=="video"||r.kind=="frame")h+=`<label class="kv"><input type="checkbox" id="qrChk" ${s.qr?"checked":""}> <b>Put a QR code for this video</b></label>`+(s.qr?`<input id="qrLink" style="width:100%" dir="ltr" value="${esc(s.ql||"")}" placeholder="Google Photos link (paste now or later)"><input id="qrLab" style="width:100%" value="${esc(s.qt||"")}" placeholder="Label near the QR, e.g. ▶ הזיפליין">`:"");
+  return h}
+function filmHTML(r,s){if(r.kind!="video")return"";const F=FILM[fkey(r.id)];const c=(s.pt===undefined||s.pt==="")?null:+s.pt;
+  let h=`<div class="sec">Pick the frame for the album <span class="kv">(clip is ${Math.round(r.dur||0)}s)</span></div>`;
+  if(!F)h+=`<div class="kv">No filmstrip for this clip. Type the second you want below.</div>`;
+  else h+=`<div class="film">`+F.frames.map(f=>`<div><img alt="" data-pt="${f.t}" class="${c!==null&&Math.abs(c-f.t)<0.01?"on":""}" data-k="${esc(filmK(r,f.f))}"><span>${f.t}s</span></div>`).join("")+`</div>`;
+  h+=`<div class="row"><span class="kv" style="align-self:center">Exact second:</span><input id="ptIn" size="6" inputmode="decimal" value="${c===null?"":c}" placeholder="e.g. 12.4"><button id="ptClr">Clear</button></div>`;
+  h+=`<div class="kv">Tap a frame, or type any second (the full video plays only on the PC version). run_picks.bat turns these into full-resolution PNGs.</div>`;return h}
+function ctxHTML(n){const i=items.findIndex(r=>r.n==n);const a=items.slice(Math.max(0,i-6),i+7);
+  return a.map(r=>{const s=st(r);return `<div class="${s.d} ${r.n==n?"now":""}" data-cn="${r.n}" title="#${r.n} ${r.t_local.slice(5,16)} ${r.tier}"><img alt="" data-k="${esc(r.thumb)}"><span>${r.kind=="video"?"▶ ":""}#${r.n} ${r.tier}</span></div>`}).join("")}
+function setDec(n,d){const r=byN[n];st(r).d=d;st(r).x=true;mark("i",n);if(cur==n)open(n);counts();refreshCard(n)}
+function refreshCard(n){const old=document.querySelector(`.card[data-n="${n}"]`);if(old){const r=byN[n];if(shown().includes(r)){const c=card(r);old.replaceWith(c);hydrate(c.parentNode)}else old.remove()}renderDays()}
+function nav(dir){const list=shown();const i=list.findIndex(r=>r.n==cur);const nx=list[i+dir];if(nx)open(nx.n)}
+function togglePerson(n,k){const s=st(byN[n]);s.p=s.p||[];s.p=s.p.includes(k)?s.p.filter(x=>x!=k):[...s.p,k];mark("i",n);if(cur==n)open(n);refreshCard(n)}
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".card");if(c&&view=="P"){const n=+c.dataset.n;
+    if(selMode||e.ctrlKey||e.shiftKey||e.metaKey){sel.has(n)?sel.delete(n):sel.add(n);c.classList.toggle("sel");renderBulk();return}
+    open(n);return}
+  const cn=e.target.closest("[data-cn]");if(cn){open(+cn.dataset.cn);return}
+  const fi=e.target.closest("img[data-pt]");if(fi&&cur!=null){st(byN[cur]).pt=fi.dataset.pt;mark("i",cur);open(cur);refreshCard(cur);return}
+  const id=e.target.id;
+  if(id=="lb"||id=="close"||id=="mClose"){closeLB();return}
+  if(id=="prev"||id=="mPrev"){nav(-1);return}if(id=="next"||id=="mNext"){nav(1);return}
+  if(e.target.closest("#lbSide")&&cur!=null){const d=e.target.closest("[data-d]");if(d){setDec(cur,d.dataset.d);return}
+    const p=e.target.closest("[data-p]");if(p){togglePerson(cur,p.dataset.p);return}}
+  const bd=e.target.closest("[data-bd]");if(bd){sel.forEach(n=>{st(byN[n]).d=bd.dataset.bd;st(byN[n]).x=true;mark("i",n)});toast(sel.size+" marked "+bd.dataset.bd);sel.clear();render();return}
+  const bp=e.target.closest("[data-bp]");if(bp){sel.forEach(n=>{const s=st(byN[n]);s.p=s.p||[];if(!s.p.includes(bp.dataset.bp)){s.p.push(bp.dataset.bp);mark("i",n)}});toast("Tagged "+sel.size+" as "+bp.dataset.bp);sel.clear();render();return}
+  if(id=="bulkClear"){sel.clear();render()}});
+/* swipe in viewer */
+let tx=null,ty=null;const wrap=$("#lbImgWrap");
+wrap.addEventListener("touchstart",e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:true});
+wrap.addEventListener("touchend",e=>{if(tx==null)return;const t=e.changedTouches[0];const dx=t.clientX-tx,dy=t.clientY-ty;tx=null;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)nav(dx<0?1:-1)},{passive:true});
+let hov=null;document.addEventListener("mouseover",e=>{const c=e.target.closest(".card");hov=c?+c.dataset.n:null});
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName=="TEXTAREA"||e.target.tagName=="INPUT"||e.target.tagName=="SELECT")return;
+  const o=!$("#lb").hidden;const tgt=o?cur:hov;
+  if(e.key=="Escape"&&o)closeLB();
+  else if(o&&e.key=="ArrowRight")nav(1);else if(o&&e.key=="ArrowLeft")nav(-1);
+  else if(!o&&e.key=="Enter"&&e.target.classList.contains("card"))open(+e.target.dataset.n);
+  else if(tgt&&["1","2","3"].includes(e.key))setDec(tgt,["keep","maybe","cut"][+e.key-1]);
+  else if(tgt&&e.shiftKey){const p=PEOPLE.find(p=>p[0][0].toLowerCase()==e.key.toLowerCase());if(p)togglePerson(tgt,p[0])}});
+
+/* ---------- frames + no-timestamp tabs ---------- */
+function renderFrames(){const m=$("#main");m.innerHTML=`<p class="hint">Each snapshot you took from a video, matched to its source video and second. <b class="conf-high">High</b> = very likely right, <b class="conf-ok">OK</b> = probably, <b class="conf-low">Low</b> = please check. If the match is wrong, type the correct video's # from the Photos tab.</p>`;
+  frames.slice().sort((a,b)=>(a.t_local||"z").localeCompare(b.t_local||"z")).forEach(f=>{
+   const s=S.frames[f.id]||(S.frames[f.id]={d:"maybe",src:f.src_n||"",c:""});const src=byN[s.src];
+   const div=document.createElement("div");div.className="frame";
+   div.innerHTML=`<img alt="" data-k="${esc(f.thumb)}"><div class="info"><b>${esc(f.name)}</b> ${drvLink(f.name,"full res ↗")}<br>
+    Match: <b class="conf-${f.match_conf||"low"}">${(f.match_conf||"low").toUpperCase()}</b> (${f.match_score||"-"}) → video <b>#${esc(s.src||"?")}</b> at <b>${f.src_t!=null?f.src_t+"s":"?"}</b><br>
+    ${f.note?`<i>${esc(f.note)}</i><br>`:""}Time: ${f.t_local?f.t_local.replace("T"," "):"unknown"} · Place: ${esc(f.place||"?")}
+    <div class="row" style="margin-top:6px"><button data-fd="keep" class="${s.d=="keep"?"on":""}">Use in album</button><button data-fd="maybe" class="${s.d=="maybe"?"on":""}">Maybe</button><button data-fd="cut" class="${s.d=="cut"?"on":""}">Drop</button>
+    <span class="kv" style="align-self:center">source video #</span><input size="5" inputmode="numeric" value="${esc(s.src||"")}" data-fs="1"></div></div>
+    ${src?`<img alt="" data-k="${esc(src.strip||src.thumb)}" style="height:90px;align-self:center" title="source video #${src.n}">`:""}`;
+   div.querySelectorAll("[data-fd]").forEach(b=>b.onclick=()=>{s.d=b.dataset.fd;mark("f",f.id);counts();renderFrames();hydrate($("#main"))});
+   div.querySelector("[data-fs]").onchange=e=>{s.src=e.target.value.trim();mark("f",f.id);renderFrames();hydrate($("#main"))};
+   m.appendChild(div)})}
+function renderNoTime(){const m=$("#main");m.innerHTML=`<p class="hint">These ${notime.length} files carry no date (probably forwarded WhatsApp copies). Pick the photo # each should sit next to.</p>`;
+  notime.forEach(f=>{const s=S.notime[f.id]||(S.notime[f.id]={after:"",d:"maybe",c:""});const div=document.createElement("div");div.className="frame";
+   div.innerHTML=`<img alt="" data-k="${esc(f.thumb)}"><div class="info"><b>${esc(f.name)}</b> (${f.kind}) ${drvLink(f.name,"full res ↗")}<div class="row" style="margin-top:6px"><button data-nd="keep" class="${s.d=="keep"?"on":""}">Keep</button><button data-nd="maybe" class="${s.d=="maybe"?"on":""}">Maybe</button><button data-nd="cut" class="${s.d=="cut"?"on":""}">Cut</button><span class="kv" style="align-self:center">place after photo #</span><input size="5" inputmode="numeric" value="${esc(s.after||"")}" data-na="1"></div></div>`;
+   div.querySelectorAll("[data-nd]").forEach(b=>b.onclick=()=>{s.d=b.dataset.nd;mark("t",f.id);renderNoTime();hydrate($("#main"))});
+   div.querySelector("[data-na]").onchange=e=>{s.after=e.target.value.trim();mark("t",f.id)};m.appendChild(div)})}
+
+/* ---------- import / export ---------- */
+let pendingImport=null;
+function decisionsJSON(){return JSON.stringify({saved:new Date().toISOString(),people:PEOPLE,items:S.items,frames:S.frames,notime:S.notime},null,1)}
+function renderIO(){const m=$("#main");
+  const imp=pendingImport?`<div class="panel"><b>Ready to import</b><div class="kv">${Object.keys(pendingImport.items||{}).length} photos/videos, ${Object.keys(pendingImport.frames||{}).length} frames, ${Object.keys(pendingImport.notime||{}).length} undated files${pendingImport.saved?` · saved <b class="num">${esc(pendingImport.saved.replace("T"," ").slice(0,16))}</b>`:""}.</div><div class="kv">Every item in the file replaces what the cloud has for that item. Items not in the file stay as they are.</div><div class="row"><button id="impGo" class="on">Import into the cloud</button><button id="impNo">Cancel</button></div></div>`:"";
+  m.innerHTML=`<div class="panel"><b>Export to the PC</b><div class="kv">Saves <b>decisions.json</b> in the same format the PC tools read. Put it in the <b>_album</b> folder, then run run_picks.bat / run_make_wow.bat as before.</div><div class="row"><button id="expGo">Save decisions.json</button><button id="expCopy">Copy as text</button></div></div>
+   <div class="panel"><b>Import from the PC</b><div class="kv">On the PC app, press <b>Save to folder</b> first, then pick that decisions.json here. Use this if you made choices on the PC after the cloud copy was set up.</div><input type="file" id="impFile" accept=".json,application/json"></div>${imp}
+   <div class="row"><button id="ioBack">← Back to photos</button></div>`;
+  $("#ioBack").onclick=()=>{view="P";tabs();render()};
+  $("#expGo").onclick=async()=>{const out=decisionsJSON();if(downloads){try{await downloads.save({filename:"decisions.json",data:out});toast("decisions.json saved")}catch(e){toast(e&&e.code=="cancelled"?"Save cancelled":"Could not save the file – use Copy as text")}}else toast("Saving files isn't available here – use Copy as text")};
+  $("#expCopy").onclick=()=>{navigator.clipboard.writeText(decisionsJSON()).then(()=>toast("Copied – paste into decisions.json")).catch(()=>toast("Copy was blocked by this browser"))};
+  $("#impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const j=JSON.parse(t);if(!j.items)throw 0;pendingImport=j;renderIO()}catch(x){toast("That file isn't a decisions.json")}})};
+  if(pendingImport){$("#impNo").onclick=()=>{pendingImport=null;renderIO()};$("#impGo").onclick=()=>doImport(pendingImport)}}
+async function doImport(j){Object.entries(j.items||{}).forEach(([n,v])=>{if(byN[n])S.items[n]=v});Object.assign(S.frames,j.frames||{});Object.assign(S.notime,j.notime||{});cacheLocal();pendingImport=null;
+  if(!db){toast("Imported on this device only – the cloud isn't reachable");view="P";tabs();render();return}
+  setSync("busy","Importing…");try{
+    for(const d of days){const full={};items.forEach(r=>{if(dayOf(r.n)==d&&S.items[r.n])full[r.n]=S.items[r.n]});await db.doc("days/"+d).set({items:full})}
+    await db.doc("extra/frames").set({f:S.frames});await db.doc("extra/notime").set({f:S.notime});setSync("ok","Imported and saved");toast("Imported")}
+  catch(e){setSync("err","Import failed – try again");toast("Import failed: "+(e&&e.message||"unknown error"))}
+  view="P";tabs();render()}
+
+/* ---------- chrome ---------- */
+let toastT;function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>e.hidden=true,2800)}
+function tabs(){$("#tabP").classList.toggle("on",view=="P");$("#tabF").classList.toggle("on",view=="F");$("#tabN").classList.toggle("on",view=="N");$("#more").classList.toggle("on",view=="IO")}
+$("#tabP").onclick=()=>{view="P";tabs();render()};$("#tabF").onclick=()=>{view="F";tabs();render()};$("#tabN").onclick=()=>{view="N";tabs();render()};$("#more").onclick=()=>{view=view=="IO"?"P":"IO";tabs();render()};
+$("#fToggle").onclick=()=>{$("#filters").classList.toggle("open");$("#fToggle").classList.toggle("on")};
+$("#selMode").onclick=()=>{selMode=!selMode;$("#selMode").classList.toggle("on",selMode);$("#selMode").textContent=selMode?"Selecting – tap photos":"Select";if(!selMode){sel.clear();render()}};
+["fTier","fKind","fDec","fPpl"].forEach(id=>{$("#"+id).onchange=e=>{filt[{fTier:"tier",fKind:"kind",fDec:"dec",fPpl:"ppl"}[id]]=e.target.value;view="P";tabs();const a=cur||lastN;render();if(a){const c=document.querySelector(`.card[data-n="${a}"]`);if(c)c.scrollIntoView({block:"center"})}}});
+PEOPLE.forEach(p=>{const o=document.createElement("option");o.value=p[0];o.textContent=p[0]+" "+p[1];$("#fPpl").appendChild(o)});
+$("#showSoft").onchange=render;
+const setHH=()=>document.documentElement.style.setProperty("--hh",$("#hdr").offsetHeight+"px");addEventListener("resize",setHH);
+render();setHH();connect();
+</script>

@@ -1,0 +1,5 @@
+av
+pillow
+pillow-heif==1.1.1
+numpy
+opencv-python-headless

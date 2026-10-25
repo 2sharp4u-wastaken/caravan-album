@@ -1,0 +1,26 @@
+python 3.14.6 (tags/v3.14.6:c63aec6, Jun 10 2026, 10:26:10) [MSC v.1944 64 bit (AMD64)] Windows-11-10.0.26200-SP0
+sample heic: ['C:\\Users\\אני\\Downloads\\Caravan Trip in Germany, Austria & Czechia 8-2026\\IMG_0359.HEIC', 'C:\\Users\\אני\\Downloads\\Caravan Trip in Germany, Austria & Czechia 8-2026\\IMG_0368.HEIC', 'C:\\Users\\אני\\Downloads\\Caravan Trip in Germany, Austria & Czechia 8-2026\\IMG_0369.HEIC']
+PyAV OK IMG_0359.HEIC 3464 4618 jpeg_pipe
+PyAV OK IMG_0368.HEIC 4618 3464 jpeg_pipe
+pip 0.22.0 install failed: ng wheel for pillow-heif
+error: failed-wheel-build-for-install
+
+Failed to build installable wheels for some pyproject.toml based projects
+
+pillow-heif
+pip 0.21.0 install failed: ng wheel for pillow-heif
+error: failed-wheel-build-for-install
+
+Failed to build installable wheels for some pyproject.toml based projects
+
+pillow-heif
+pip 1.0.0 install failed: ng wheel for pillow-heif
+error: failed-wheel-build-for-install
+
+Failed to build installable wheels for some pyproject.toml based projects
+
+pillow-heif
+pillow-heif 1.1.1 -> OK (3464, 4618)
+WORKING VERSION 1.1.1
+WIC: WIC OK 3464x4618
+probe done

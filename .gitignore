@@ -1,0 +1,14 @@
+# per-machine
+.venv/
+config.json
+__pycache__/
+.DS_Store
+# generated from originals (rebuild with the scripts, or copy from Drive _album)
+thumbs/
+film/
+strips/
+for_wow/
+draft/
+picks/
+samples.npz
+*.zip
