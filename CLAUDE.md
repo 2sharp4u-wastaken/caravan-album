@@ -48,8 +48,8 @@ https://claude.ai/artifact/8A8ZwMeRZnKrPhwiFzhJkM – private, works on phone.
 - Decisions in cloud and local decisions.json were verified identical on 2026-10-25 (127 reviewed).
 
 ## Open tasks (in order)
-1. **Repo hygiene:** move every hard-coded path (C:\\Users\\אני\\...) into `config.json` (`photos_dir`, `work_dir`), add `.sh` equivalents
-   of the `.bat` files so everything runs on macOS too, add `requirements.txt` (recreate .venv per machine).
+1. ~~Repo hygiene~~ – done 2026-10-25: `config.py` + `config.json` (`photos_dir`; default = parent folder, so the old Windows layout still works),
+   `setup.sh` / `run_*.sh` for macOS, `requirements.txt`. Not yet run on a Mac – verify `./setup.sh` end to end on first use.
 2. **Migrate the review app off claude.ai** so everything is maintained from Claude Code:
    - Host the app on GitHub Pages (code only, no photos – repo/page can be public or private-with-Pages).
    - Google sign-in (Google Identity Services, OAuth client for the Pages origin; scope `drive.file` or `drive.readonly` + app-data as needed).
@@ -61,7 +61,7 @@ https://claude.ai/artifact/8A8ZwMeRZnKrPhwiFzhJkM – private, works on phone.
    - Must stay: mobile layout, Select mode, swipe, frame picker, people tags, captions, QR/page fields.
    - The user must create the Google Cloud project + OAuth Client ID (Web, authorized origin = the Pages URL). Walk them through it click by click.
    - Migration of data: seed the per-day files from decisions.json (current state of truth).
-   - The current artifact source (index.html, data.js, film.js, manifest.js, drive.js, pack blobs) can be downloaded from the claude.ai artifact; ask the user if needed.
+   - The current artifact source is in `cloud/` (index.html, data.js, film.js, manifest.js, drive.js). The per-day thumbnail pack blobs (~100 MB) are NOT in git – regenerate from thumbs/ + film/ or ask for them.
 3. **Live Photos (434 items with `live`):** add frame picking. Extend `film.py` to make filmstrips for Live clips (~3 s, ~8 frames each),
    show the picker for photos with `live` with "original photo (full res)" as default, and make `picks.py` extract the chosen frame.
    Clip frames are ≤1440×1920 vs ~12 MP stills – fine for small slots only.
