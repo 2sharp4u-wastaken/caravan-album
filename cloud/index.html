@@ -131,6 +131,7 @@ textarea{width:100%;min-height:64px;direction:rtl;text-align:right}
   <div class="hrow">
     <h1>Caravan Album Review</h1>
     <span class="sync busy" id="sync"><i></i><span id="syncT">Connecting…</span></span>
+    <button id="signin" title="Sign in with your Google account to load thumbnails and sync choices via Drive">Sign in with Google</button>
     <span class="spacer"></span>
     <button id="selMode" title="Tap photos to select several, then decide or tag them together">Select</button>
     <button id="fToggle">Filters</button>
@@ -176,11 +177,13 @@ textarea{width:100%;min-height:64px;direction:rtl;text-align:right}
 
 <script src="data.js"></script>
 <script src="film.js"></script>
-<script src="manifest.js"></script>
 <script src="drive.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="config.js"></script>
+<script src="drivesync.js"></script>
 <script>
 const PEOPLE=[["Eran","ערן"],["Liat","ליאת"],["Omer","עומר"],["Zohar","זוהר"],["Idan","עידן"],["Friends","חברים"],["Strangers","זרים"]];
-const D=window.DATA,FILM=window.FILM||{},MAN=window.MAN||{},DRV=window.DRIVE||{};
+const D=window.DATA,FILM=window.FILM||{},DRV=window.DRIVE||{};
 const drvLink=(name,label)=>DRV[name]?`<a class="drv" target="_blank" rel="noopener" href="https://drive.google.com/file/d/${DRV[name]}/view">${label||"Open full resolution in Drive ↗"}</a>`:"";
 const items=D.items.slice().sort((a,b)=>a.t_local.localeCompare(b.t_local)||a.n-b.n),frames=D.frames,notime=D.notime;
 const byN={};items.forEach(r=>byN[r.n]=r);
@@ -197,11 +200,11 @@ const days=[...new Set(items.map(r=>r.t_local.slice(0,10)))];
 const DN=d=>new Date(d+"T12:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
 $("#nF").textContent=frames.length;
 
-/* ---------- images from per-day packs ---------- */
-const packs={},urls={};
-function pack(fn){return packs[fn]||(packs[fn]=fetch(fn).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer()}).catch(e=>{delete packs[fn];throw e}))}
-function imgURL(k){if(!k||!MAN[k])return Promise.resolve("");if(urls[k])return urls[k];const m=MAN[k];
-  return urls[k]=pack(m[0]).then(b=>URL.createObjectURL(new Blob([new Uint8Array(b,m[1],m[2])],{type:m[3]}))).catch(e=>{delete urls[k];throw e})}
+/* ---------- images fetched live from Drive (_album/<key>) ---------- */
+const urls={};
+function imgURL(k){if(!k)return Promise.resolve("");if(urls[k])return urls[k];
+  if(!window.DriveSync||!DriveSync.isSignedIn())return Promise.reject(new Error("not signed in"));
+  return urls[k]=DriveSync.getBlobURL(k).catch(e=>{delete urls[k];throw e})}
 function setImg(el){const k=el.dataset.k;imgURL(k).then(u=>{if(u&&el.dataset.k===k)el.src=u}).catch(()=>{el.alt="image failed to load"})}
 const io=("IntersectionObserver" in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){io.unobserve(e.target);setImg(e.target)}}),{rootMargin:"800px 0px"}):null;
 function hydrate(root){root.querySelectorAll("img[data-k]").forEach(el=>{if(el.dataset.done)return;el.dataset.done=1;io?io.observe(el):setImg(el)})}
@@ -209,34 +212,53 @@ function showImg(el,k){el.removeAttribute("src");el.dataset.k=k||"";if(k)setImg(
 const fkey=i=>i.replace(/[^\w.\-]/g,"_");
 const filmK=(r,f)=>"film/"+fkey(r.id)+"/"+f;
 
-/* ---------- cloud sync ---------- */
-let db=null,downloads=null;const pend=new Map(),chains={},pendKeys=new Set();
+/* ---------- cloud sync (Google Drive, _album/decisions/) ---------- */
+const pend=new Map(),chains={},pendKeys=new Set();
 function setSync(cls,t){const e=$("#sync");e.className="sync "+cls;$("#syncT").textContent=t}
 function cacheLocal(){try{localStorage.setItem(LKEY,JSON.stringify({items:S.items,frames:S.frames,notime:S.notime}))}catch(e){}}
-function docFor(kind,key){return kind=="i"?"days/"+dayOf(key):kind=="f"?"extra/frames":"extra/notime"}
+function docFor(kind,key){return kind=="i"?"decisions/days/"+dayOf(key)+".json":kind=="f"?"decisions/extra/frames.json":"decisions/extra/notime.json"}
 function mapFor(kind){return kind=="i"?S.items:kind=="f"?S.frames:S.notime}
 let saveT=null;
 function mark(kind,key,delay){cacheLocal();const path=docFor(kind,key);if(!pend.has(path))pend.set(path,new Set());pend.get(path).add(key);pendKeys.add(kind+key);
-  clearTimeout(saveT);saveT=setTimeout(flush,delay||250);if(db)setSync("busy","Saving…")}
-function flush(){if(!db){setSync("err","Not syncing – kept on this device");return}
-  for(const [path,keys] of pend){pend.delete(path);const kind=path.startsWith("days/")?"i":path=="extra/frames"?"f":"t";const M=mapFor(kind);
-    const field=kind=="i"?"items":"f";const patch={};keys.forEach(k=>patch[k]=M[k]);
-    chains[path]=(chains[path]||Promise.resolve()).then(()=>db.doc(path).update({[field]:patch}).catch(e=>{
-      if(e&&e.code==="invalid_argument"){const full={};if(kind=="i"){const d=path.slice(5);items.forEach(r=>{if(dayOf(r.n)==d&&S.items[r.n])full[r.n]=S.items[r.n]})}else Object.assign(full,M);return db.doc(path).set({[field]:full})}throw e}))
-      .then(()=>{keys.forEach(k=>pendKeys.delete(kind+k));if(!pend.size)setSync("ok","Saved to cloud")})
-      .catch(e=>{setSync("err",e&&e.code==="quota_exceeded"?"Cloud storage full":"Save failed – will retry");keys.forEach(k=>{if(!pend.has(path))pend.set(path,new Set());pend.get(path).add(k)});clearTimeout(saveT);saveT=setTimeout(flush,5000)})}}
+  clearTimeout(saveT);saveT=setTimeout(flush,delay||250);if(window.DriveSync&&DriveSync.isSignedIn())setSync("busy","Saving…")}
+function flush(){if(!window.DriveSync||!DriveSync.isSignedIn()){setSync("err","Not signed in – choices stay on this device");return}
+  for(const [path,keys] of pend){pend.delete(path);const kind=path.startsWith("decisions/days/")?"i":path=="decisions/extra/frames.json"?"f":"t";const M=mapFor(kind);
+    const field=kind=="i"?"items":"f";const full={};
+    if(kind=="i"){const d=path.slice("decisions/days/".length,-5);items.forEach(r=>{if(dayOf(r.n)==d&&S.items[r.n])full[r.n]=S.items[r.n]})}else Object.assign(full,M);
+    chains[path]=(chains[path]||Promise.resolve()).then(()=>DriveSync.writeJSON(path,{[field]:full}))
+      .then(()=>{keys.forEach(k=>pendKeys.delete(kind+k));if(!pend.size)setSync("ok","Saved to Drive")})
+      .catch(e=>{setSync("err","Save failed – will retry");keys.forEach(k=>{if(!pend.has(path))pend.set(path,new Set());pend.get(path).add(k)});clearTimeout(saveT);saveT=setTimeout(flush,5000)})}}
 function applyRemote(kind,map){const M=mapFor(kind);const changed=[];
   for(const k in map){if(pendKeys.has(kind+k))continue;const v=JSON.stringify(map[k]);if(JSON.stringify(M[k])!==v){M[k]=JSON.parse(v);changed.push(k)}}return changed}
-let firstSnap=true;
+async function loadAllFromDrive(){
+  for(const d of days){const j=await DriveSync.readJSON("decisions/days/"+d+".json");if(j&&j.items)applyRemote("i",j.items)}
+  const jf=await DriveSync.readJSON("decisions/extra/frames.json");if(jf&&jf.f)applyRemote("f",jf.f);
+  const jt=await DriveSync.readJSON("decisions/extra/notime.json");if(jt&&jt.f)applyRemote("t",jt.f);
+  cacheLocal()}
+let pollBusy=false;
+async function pollRefresh(){if(pollBusy||!DriveSync.isSignedIn())return;pollBusy=true;
+  try{const changed=[];const d=filt.day||dayOf(cur!=null?cur:(lastN!=null?lastN:items[0].n));
+    const j=await DriveSync.readJSON("decisions/days/"+d+".json");if(j&&j.items)changed.push(...applyRemote("i",j.items));
+    const jf=await DriveSync.readJSON("decisions/extra/frames.json");if(jf&&jf.f)changed.push(...applyRemote("f",jf.f));
+    const jt=await DriveSync.readJSON("decisions/extra/notime.json");if(jt&&jt.f)changed.push(...applyRemote("t",jt.f));
+    if(changed.length){remoteRefresh(changed);cacheLocal()}}
+  catch(e){}
+  pollBusy=false}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")pollRefresh()});
+addEventListener("focus",()=>pollRefresh());
 async function connect(){
-  try{db=await window.claude.use("db")}catch(e){db=null}
-  try{downloads=await window.claude.use("downloads")}catch(e){downloads=null}
-  if(!db){setSync("err","Offline – choices stay on this device");return}
-  db.collection("days").onSnapshot(snap=>{let ch=[];snap.docs.forEach(d=>{const b=d.data();if(b&&b.items)ch=ch.concat(applyRemote("i",b.items))});
-      if(firstSnap){firstSnap=false;render();setSync("ok",snap.empty?"Cloud is empty – import decisions.json":"Synced")}else if(ch.length)remoteRefresh(ch);cacheLocal()},
-    e=>setSync("err","Sync stopped – reload the page"));
-  db.collection("extra").onSnapshot(snap=>{let ch=0;snap.docs.forEach(d=>{const b=d.data()||{};if(d.id=="frames"&&b.f)ch+=applyRemote("f",b.f).length;if(d.id=="notime"&&b.f)ch+=applyRemote("t",b.f).length});
-      if(ch&&view!="P")render();cacheLocal()},()=>{});
+  if(!window.DriveSync||!window.CLOUD_CONFIG||!CLOUD_CONFIG.clientId||CLOUD_CONFIG.clientId.startsWith("REPLACE_")){
+    setSync("err","Not configured – edit cloud/config.js with your Google Client ID");return}
+  try{await DriveSync.init(CLOUD_CONFIG.clientId)}catch(e){setSync("err","Sign-in script failed to load");return}
+  DriveSync.onAuth(async info=>{
+    if(!info.signedIn){setSync("err","Sign-in failed – tap Sign in to retry");return}
+    $("#signin").textContent="Signed in ✓";$("#signin").classList.add("on");
+    setSync("busy","Loading from Drive…");
+    try{await loadAllFromDrive();render();setSync("ok","Synced")}
+    catch(e){setSync("err","Drive error: "+(e&&e.message||e))}});
+  $("#signin").onclick=()=>DriveSync.signIn(true);
+  setSync("err","Not signed in – tap Sign in with Google");
+  DriveSync.signIn(false);
 }
 function remoteRefresh(ns){counts();if(cur!=null&&ns.includes(String(cur))){const a=document.activeElement;if(!(a&&(a.tagName=="TEXTAREA"||a.tagName=="INPUT")))open(cur)}
   if(view=="P")ns.forEach(n=>refreshCard(+n));renderDays()}
@@ -375,15 +397,17 @@ function renderIO(){const m=$("#main");
    <div class="panel"><b>Import from the PC</b><div class="kv">On the PC app, press <b>Save to folder</b> first, then pick that decisions.json here. Use this if you made choices on the PC after the cloud copy was set up.</div><input type="file" id="impFile" accept=".json,application/json"></div>${imp}
    <div class="row"><button id="ioBack">← Back to photos</button></div>`;
   $("#ioBack").onclick=()=>{view="P";tabs();render()};
-  $("#expGo").onclick=async()=>{const out=decisionsJSON();if(downloads){try{await downloads.save({filename:"decisions.json",data:out});toast("decisions.json saved")}catch(e){toast(e&&e.code=="cancelled"?"Save cancelled":"Could not save the file – use Copy as text")}}else toast("Saving files isn't available here – use Copy as text")};
+  $("#expGo").onclick=()=>{const out=decisionsJSON();const blob=new Blob([out],{type:"application/json"});const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="decisions.json";document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast("decisions.json downloaded")};
   $("#expCopy").onclick=()=>{navigator.clipboard.writeText(decisionsJSON()).then(()=>toast("Copied – paste into decisions.json")).catch(()=>toast("Copy was blocked by this browser"))};
   $("#impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const j=JSON.parse(t);if(!j.items)throw 0;pendingImport=j;renderIO()}catch(x){toast("That file isn't a decisions.json")}})};
   if(pendingImport){$("#impNo").onclick=()=>{pendingImport=null;renderIO()};$("#impGo").onclick=()=>doImport(pendingImport)}}
 async function doImport(j){Object.entries(j.items||{}).forEach(([n,v])=>{if(byN[n])S.items[n]=v});Object.assign(S.frames,j.frames||{});Object.assign(S.notime,j.notime||{});cacheLocal();pendingImport=null;
-  if(!db){toast("Imported on this device only – the cloud isn't reachable");view="P";tabs();render();return}
-  setSync("busy","Importing…");try{
-    for(const d of days){const full={};items.forEach(r=>{if(dayOf(r.n)==d&&S.items[r.n])full[r.n]=S.items[r.n]});await db.doc("days/"+d).set({items:full})}
-    await db.doc("extra/frames").set({f:S.frames});await db.doc("extra/notime").set({f:S.notime});setSync("ok","Imported and saved");toast("Imported")}
+  if(!window.DriveSync||!DriveSync.isSignedIn()){toast("Imported on this device only – sign in with Google to save it to Drive");view="P";tabs();render();return}
+  setSync("busy","Importing to Drive…");try{
+    for(const d of days){const full={};items.forEach(r=>{if(dayOf(r.n)==d&&S.items[r.n])full[r.n]=S.items[r.n]});await DriveSync.writeJSON("decisions/days/"+d+".json",{items:full})}
+    await DriveSync.writeJSON("decisions/extra/frames.json",{f:S.frames});await DriveSync.writeJSON("decisions/extra/notime.json",{f:S.notime});setSync("ok","Imported and saved to Drive");toast("Imported")}
   catch(e){setSync("err","Import failed – try again");toast("Import failed: "+(e&&e.message||"unknown error"))}
   view="P";tabs();render()}
 
