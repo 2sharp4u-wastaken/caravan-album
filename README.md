@@ -12,7 +12,7 @@ Start with **CLAUDE.md** – full project notes, rules and open tasks.
 
 ## Folders
 - `review/` – local PC review app (`review.html` + `data.js`, `items_min.json`)
-- `cloud/` – source of the claude.ai cloud review app (thumbnail packs not included; they live in the artifact)
+- `cloud/` – GitHub Pages review app (Google sign-in + Drive sync, no claude.ai runtime needed). See `cloud/README.md` for one-time setup (OAuth client, enabling Pages).
 - `maps/` – Hebrew day minimaps + endpaper route map
 - `tools/build_drive_ids.gs` – Apps Script that builds `drive_ids.json`
 - generated, not in git: `thumbs/ film/ strips/ for_wow/ picks/ draft/`

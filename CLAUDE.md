@@ -32,12 +32,14 @@ Total ≈ 11.4 GB; originals ≈ 9.9 GB.
 - `drive_ids.json` – filename → Google Drive file ID for every original (built by Apps Script `build_drive_ids.gs`, Drive folder id 17pCaZasqkkXreElzLwraxWKHeezRWx00). Re-run the script if originals are replaced.
 - `.venv\` – Python env, machine-specific; don't sync/commit, recreate with `python -m venv .venv`.
 
-## Cloud copy (claude.ai artifact "Caravan Album Review")
-https://claude.ai/artifact/8A8ZwMeRZnKrPhwiFzhJkM – private, works on phone.
-- Same UI as review.html plus Select mode, touch, sync via the artifact db (docs `days/<date>`, `extra/frames`, `extra/notime`).
-- Thumbnails/frames packed per day into blobs referenced by `manifest.js`; `film.js` lists frames; `drive.js` = name → Drive ID for "Open full resolution in Drive" buttons.
-- Until task 2 is done, **the cloud copy is the source of truth for decisions.** Move them to the PC with Import/Export → save `decisions.json` into `_album`, then run the .bat scripts.
-- It can't play full videos (videos not uploaded); it uses the filmstrips.
+## Cloud copy
+Old claude.ai artifact "Caravan Album Review": https://claude.ai/artifact/8A8ZwMeRZnKrPhwiFzhJkM – private, works on
+phone, syncs via the artifact db. Being replaced by task 2 (GitHub Pages + Google Drive, code already in `cloud/`,
+see above) – keep the artifact around as a fallback only until Eran finishes the one-time setup and re-imports
+decisions.json there. Same UI either way: Select mode, touch, `film.js` lists frames, `drive.js` = name → Drive ID
+for "Open full resolution in Drive" buttons. Neither version can play full videos (not uploaded); both use filmstrips.
+- Until task 2's setup is done, **the claude.ai artifact is still the source of truth for decisions.** Move them to
+  the PC with Import/Export → save `decisions.json` into `_album`, then run the .bat/.sh scripts.
 
 ## Where things live
 - **Originals:** Google Drive, backed up from the Windows PC (Drive → Computers → My Computer → trip folder, id 17pCaZasqkkXreElzLwraxWKHeezRWx00).
@@ -50,18 +52,25 @@ https://claude.ai/artifact/8A8ZwMeRZnKrPhwiFzhJkM – private, works on phone.
 ## Open tasks (in order)
 1. ~~Repo hygiene~~ – done 2026-10-25: `config.py` + `config.json` (`photos_dir`; default = parent folder, so the old Windows layout still works),
    `setup.sh` / `run_*.sh` for macOS, `requirements.txt`. Not yet run on a Mac – verify `./setup.sh` end to end on first use.
-2. **Migrate the review app off claude.ai** so everything is maintained from Claude Code:
-   - Host the app on GitHub Pages (code only, no photos – repo/page can be public or private-with-Pages).
-   - Google sign-in (Google Identity Services, OAuth client for the Pages origin; scope `drive.file` or `drive.readonly` + app-data as needed).
-   - Thumbnails + film frames: read from the Drive `_album/thumbs`, `_album/film` folders with the user's token (private). Or keep the per-day packs
-     from the artifact (`manifest.js` + blobs) uploaded to Drive – fewer requests.
-   - Decisions: one JSON file per day in Drive `_album/decisions/` (mirrors the artifact db docs `days/<date>`, `extra/frames`, `extra/notime`),
-     read on load, write debounced per day, poll or re-read on focus for cross-device sync. Keep decisions.json export for the scripts.
-   - Full-res: keep `drive_ids.json` → `https://drive.google.com/file/d/<id>/view`.
-   - Must stay: mobile layout, Select mode, swipe, frame picker, people tags, captions, QR/page fields.
-   - The user must create the Google Cloud project + OAuth Client ID (Web, authorized origin = the Pages URL). Walk them through it click by click.
-   - Migration of data: seed the per-day files from decisions.json (current state of truth).
-   - The current artifact source is in `cloud/` (index.html, data.js, film.js, manifest.js, drive.js). The per-day thumbnail pack blobs (~100 MB) are NOT in git – regenerate from thumbs/ + film/ or ask for them.
+2. **Migrate the review app off claude.ai** – code done 2026-10-25, needs Eran's one-time setup (see `cloud/README.md`):
+   - `cloud/index.html` no longer calls `window.claude.use(...)`; sign-in and Drive I/O are in `cloud/drivesync.js`
+     (Google Identity Services token client, scope = full `drive`, decided over `drive.file`/readonly for simplicity).
+   - Thumbnails + film frames: fetched live from Drive `_album/thumbs`, `_album/film` per image (decided over the
+     per-day-pack-blob approach to skip a manual 100 MB upload; revisit if Drive API quota becomes a problem).
+     `manifest.js` (the old pack-offset map) is removed, no longer needed.
+   - Decisions: one JSON file per day in Drive `_album/decisions/days/<date>.json` + `extra/frames.json` + `extra/notime.json`,
+     written debounced per day via `cloud/drivesync.js`, re-read on tab focus for cross-device sync. decisions.json
+     export/import (for the PC scripts) still works, now via a plain browser download instead of the artifact's downloads API.
+   - Full-res: unchanged, `drive_ids.json` → `https://drive.google.com/file/d/<id>/view` via `drive.js`.
+   - Still true: mobile layout, Select mode, swipe, frame picker, people tags, captions, QR/page fields – untouched.
+   - **Eran still needs to, by hand** (walked through in `cloud/README.md`): make the repo public (Settings → Danger
+     Zone) and turn on Settings → Pages → Source: GitHub Actions (workflow `.github/workflows/pages.yml` already
+     added, deploys `cloud/` on push to `main`); create the Google Cloud project + OAuth Client ID (Web, authorized
+     origin = the Pages URL) and paste it into `cloud/config.js`; then sign in once on the Pages URL and use
+     Import/export → "Import into the cloud" with this repo's `decisions.json` to seed Drive.
+   - Chose to make the repo public rather than pay for private Pages – data.js/decisions.json (times, GPS, device
+     names, Hebrew captions, people tags) become world-readable at the Pages URL once that's done; thumbnails/film
+     stay private since they're fetched per-viewer from Drive with their own Google sign-in.
 3. **Live Photos (434 items with `live`):** add frame picking. Extend `film.py` to make filmstrips for Live clips (~3 s, ~8 frames each),
    show the picker for photos with `live` with "original photo (full res)" as default, and make `picks.py` extract the chosen frame.
    Clip frames are ≤1440×1920 vs ~12 MP stills – fine for small slots only.
