@@ -179,7 +179,6 @@ textarea{width:100%;min-height:64px;direction:rtl;text-align:right}
 <script src="data.js"></script>
 <script src="film.js"></script>
 <script src="drive.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="config.js"></script>
 <script src="drivesync.js"></script>
 <script>
@@ -250,16 +249,13 @@ addEventListener("focus",()=>pollRefresh());
 async function connect(){
   if(!window.DriveSync||!window.CLOUD_CONFIG||!CLOUD_CONFIG.clientId||CLOUD_CONFIG.clientId.startsWith("REPLACE_")){
     setSync("err","Not configured – edit cloud/config.js with your Google Client ID");return}
-  try{await DriveSync.init(CLOUD_CONFIG.clientId)}catch(e){setSync("err","Sign-in script failed to load");return}
-  DriveSync.onAuth(async info=>{
-    if(!info.signedIn){setSync("err","Sign-in failed – tap Sign in to retry");return}
-    $("#signin").textContent="Signed in ✓";$("#signin").classList.add("on");
-    setSync("busy","Loading from Drive…");
-    try{await loadAllFromDrive();render();setSync("ok","Synced")}
-    catch(e){setSync("err","Drive error: "+(e&&e.message||e))}});
-  $("#signin").onclick=()=>DriveSync.signIn(true);
-  setSync("err","Not signed in – tap Sign in with Google");
-  DriveSync.signIn(false);
+  DriveSync.init(CLOUD_CONFIG.clientId);
+  $("#signin").onclick=()=>DriveSync.signIn();
+  if(!DriveSync.isSignedIn()){setSync("err","Not signed in – tap Sign in with Google");return}
+  $("#signin").textContent="Signed in ✓";$("#signin").classList.add("on");
+  setSync("busy","Loading from Drive…");
+  try{await loadAllFromDrive();render();setSync("ok","Synced")}
+  catch(e){setSync("err","Drive error: "+(e&&e.message||e))}
 }
 function remoteRefresh(ns){counts();if(cur!=null&&ns.includes(String(cur))){const a=document.activeElement;if(!(a&&(a.tagName=="TEXTAREA"||a.tagName=="INPUT")))open(cur)}
   if(view=="P")ns.forEach(n=>refreshCard(+n));renderDays()}

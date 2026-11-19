@@ -1,15 +1,27 @@
 /* Minimal Google Drive REST client used by index.html for sign-in + decisions sync + image loading.
    All paths are relative to the user's "_album" folder in Drive, e.g. "thumbs/IMG_3091.MOV.jpg"
    or "decisions/days/2026-08-12.json". Folder/file ids are resolved by name and cached in localStorage
-   (safe to do: ids are stable, and the cache is only ever widened, never trusted blindly for writes). */
+   (safe to do: ids are stable, and the cache is only ever widened, never trusted blindly for writes).
+
+   Sign-in uses a full-page redirect to Google's OAuth2 implicit-grant endpoint, not a popup: some
+   browsers (managed/enterprise Chrome especially) block the Google Identity Services popup outright
+   with no per-site setting able to override it. A redirect can't be popup-blocked. The OAuth client's
+   "Authorized redirect URIs" must include this exact page's URL (see cloud/README.md). */
 (function () {
   const SCOPE = "https://www.googleapis.com/auth/drive";
   const API = "https://www.googleapis.com/drive/v3";
   const UPLOAD = "https://www.googleapis.com/upload/drive/v3";
   const CACHE_KEY = "caravan_drive_ids_v1";
+  const TOKEN_KEY = "caravan_drive_token_v1";
+  const STATE_KEY = "caravan_drive_oauth_state";
+  const REDIRECT_URI = location.origin + location.pathname;
 
-  let tokenClient = null, accessToken = null, tokenExpiry = 0, refreshTimer = null;
-  const authCbs = [];
+  let clientId = null, accessToken = null, tokenExpiry = 0;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(TOKEN_KEY) || "null");
+    if (saved && saved.expiry > Date.now()) { accessToken = saved.access_token; tokenExpiry = saved.expiry; }
+  } catch (e) {}
+  function saveToken() { try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ access_token: accessToken, expiry: tokenExpiry })); } catch (e) {} }
   let idCache = {};
   try { idCache = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}"); } catch (e) { idCache = {}; }
   function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(idCache)); } catch (e) {} }
@@ -117,42 +129,36 @@
     return writeChains[key];
   }
 
-  async function waitForGIS() {
-    let i = 0;
-    while (!(window.google && window.google.accounts && window.google.accounts.oauth2) && i < 100) {
-      await new Promise(r => setTimeout(r, 50)); i++;
-    }
-    if (!(window.google && window.google.accounts && window.google.accounts.oauth2)) {
-      throw new Error("Google sign-in script failed to load");
-    }
+  // Reads #access_token=...&expires_in=...&state=... left in the URL by Google after a redirect back
+  // here, validates it against the state we stashed before leaving, and strips the hash either way.
+  function consumeRedirectToken() {
+    if (!location.hash) return;
+    const params = new URLSearchParams(location.hash.slice(1));
+    const hadToken = params.has("access_token");
+    const savedState = sessionStorage.getItem(STATE_KEY);
+    sessionStorage.removeItem(STATE_KEY);
+    history.replaceState(null, "", location.pathname + location.search);
+    if (!hadToken) return;
+    if (params.get("state") !== savedState) return; // possible CSRF attempt or stale link - ignore silently
+    accessToken = params.get("access_token");
+    const expiresIn = parseInt(params.get("expires_in"), 10) || 3600;
+    tokenExpiry = Date.now() + (expiresIn - 60) * 1000;
+    saveToken();
   }
 
-  function scheduleRefresh() {
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => tokenClient.requestAccessToken({ prompt: "" }), Math.max(5000, tokenExpiry - Date.now()));
-  }
+  function init(id) { clientId = id; consumeRedirectToken(); }
 
-  async function init(clientId) {
-    await waitForGIS();
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SCOPE,
-      callback: (resp) => {
-        if (resp.error) { authCbs.forEach(cb => cb({ signedIn: false, error: resp.error })); return; }
-        accessToken = resp.access_token;
-        tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000;
-        scheduleRefresh();
-        authCbs.forEach(cb => cb({ signedIn: true }));
-      }
+  function signIn() {
+    if (!clientId) return;
+    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem(STATE_KEY, state);
+    const params = new URLSearchParams({
+      client_id: clientId, redirect_uri: REDIRECT_URI, response_type: "token",
+      scope: SCOPE, include_granted_scopes: "true", state
     });
-  }
-
-  function signIn(interactive) {
-    if (!tokenClient) return;
-    tokenClient.requestAccessToken(interactive === false ? { prompt: "" } : {});
+    location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
   }
   function isSignedIn() { return !!accessToken && Date.now() < tokenExpiry; }
-  function onAuth(cb) { authCbs.push(cb); }
 
-  window.DriveSync = { init, signIn, isSignedIn, onAuth, getBlobURL, readJSON, writeJSON };
+  window.DriveSync = { init, signIn, isSignedIn, getBlobURL, readJSON, writeJSON };
 })();
