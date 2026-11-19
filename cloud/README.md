@@ -33,10 +33,15 @@ private even though the page is public.
    `_album/decisions/`). Add yourself (and Liat, if she'll use it) under **Test users**. Leave the app
    in "Testing" status – that's fine for a private family tool; you'll just see a one-time
    "Google hasn't verified this app" click-through the first time each person signs in.
-4. **APIs & Services → Credentials → + Create Credentials → OAuth client ID**:
+4. **APIs & Services → Credentials → + Create Credentials → OAuth client ID** (or edit the existing one
+   under **Clients**):
    - Application type: **Web application**.
    - Authorized JavaScript origins: `https://<you>.github.io` (no path, no trailing slash).
-   - Create. Copy the Client ID (ends `.apps.googleusercontent.com`).
+   - **Authorized redirect URIs: `https://<you>.github.io/caravan-album/`** (exact page URL, trailing
+     slash included) — sign-in is a full-page redirect to Google and back, not a popup, so popup
+     blockers (common on managed/enterprise Chrome, where no per-site setting can override it) can't
+     interfere. This field is required for that to work; JavaScript origins alone isn't enough.
+   - Create/Save. Copy the Client ID (ends `.apps.googleusercontent.com`).
 5. Paste it into `cloud/config.js` here (`clientId: "..."`) and push to `main`.
 
 ### 3. Seed Drive from the current decisions.json
