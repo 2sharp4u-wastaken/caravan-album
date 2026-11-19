@@ -69,7 +69,7 @@ main{flex:1;padding-block:12px 96px;padding-left:max(16px,env(safe-area-inset-le
 .lb{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 .lb[hidden]{display:none}
 .lbin{margin:auto;width:min(1120px,96vw);max-height:94vh;background:var(--panel);border-radius:10px;display:flex;overflow:hidden}
-.lbimg{flex:1;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:8px 0;touch-action:pan-y}
+.lbimg{position:relative;flex:1;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:8px 0;touch-action:pan-y}
 .lbimg>img{max-width:100%;max-height:66vh;object-fit:contain}
 .lbimg .strip{max-height:96px;margin-top:6px}
 .lbside{width:340px;flex:none;padding:14px;overflow:auto;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
@@ -104,6 +104,20 @@ textarea{width:100%;min-height:64px;direction:rtl;text-align:right}
 .toast{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom,0px));right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border:1px solid var(--line);padding:8px 14px;border-radius:8px;z-index:90;max-width:calc(100vw - 32px)}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0;display:flex;flex-direction:column;gap:8px;max-width:640px}
 .navbtns{display:none}
+/* photo vs video: a clear badge over the image + a pill in the header */
+.kindbadge{position:absolute;top:12px;left:12px;z-index:3;display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:14px;font-weight:800;letter-spacing:.4px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.hdrbadge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;color:#fff;vertical-align:middle}
+.kindbadge.photo,.hdrbadge.photo{background:#2563eb}
+.kindbadge.video,.hdrbadge.video{background:#d97706}
+.kindbadge.map,.hdrbadge.map{background:#0891b2}
+.kindbadge.frame,.hdrbadge.frame{background:#7c3aed}
+/* frame picker collapsed at the bottom so the panel doesn't need a scrollbar */
+.framebox{border:1px solid var(--line);border-radius:8px;margin-top:2px}
+.framebox>summary{cursor:pointer;font-size:12px;font-weight:700;padding:9px 11px;list-style:none;user-select:none}
+.framebox>summary::-webkit-details-marker{display:none}
+.framebox>summary::before{content:"▸ ";color:#8aa}
+.framebox[open]>summary::before{content:"▾ "}
+.framebox>.fb{padding:0 11px 11px;display:flex;flex-direction:column;gap:8px}
 @media (max-width:820px){
   header{position:static}
   body::before{background:var(--bg)}
@@ -171,7 +185,7 @@ textarea{width:100%;min-height:64px;direction:rtl;text-align:right}
 </div>
 <div class="lb" id="lb" hidden><div class="lbin">
   <div class="navbtns"><button id="mPrev">← Prev</button><button id="mClose">Close</button><button id="mNext">Next →</button></div>
-  <div class="lbimg" id="lbImgWrap"><img id="lbImg" alt=""><img id="lbStrip" class="strip" alt=""><div class="ctx" id="lbCtx"></div></div>
+  <div class="lbimg" id="lbImgWrap"><div class="kindbadge" id="lbKind"></div><img id="lbImg" alt=""><img id="lbStrip" class="strip" alt=""><div class="ctx" id="lbCtx"></div></div>
   <div class="lbside" id="lbSide"></div>
 </div></div>
 <div class="toast" id="toast" hidden></div>
@@ -304,16 +318,20 @@ function open(n){cur=n;lastN=n;const r=byN[n];if(!r)return;const s=st(r);$("#lb"
   const note=(r.note||r.dup_of||r.conf)?`<div class="kv">${r.conf?`<span class="pill">match: ${esc(r.conf)}</span> `:""}${r.dup_of?`<b>Duplicate of #${r.dup_of}</b> `:""}${esc(r.note||"")}</div>`:"";
   const live=r.live?`<div class="kv">Live Photo clip paired: <b>${esc(r.live)}</b></div>`:"";
   const gps=(r.lat!=null)?`<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=14/${r.lat}/${r.lon}">${(+r.lat).toFixed(4)}, ${(+r.lon).toFixed(4)}</a>`:"none";
-  $("#lbSide").innerHTML=`<div class="kv" style="font-size:15px"><b>#${r.n}</b> · ${r.kind}${r.kind=="video"?" "+Math.round(r.dur||0)+"s":""} · my suggestion: <b>${r.tier}</b></div>
+  const _kb={photo:["📷","PHOTO"],video:["▶","VIDEO"],map:["🗺","MAP"],frame:["▦","FRAME"]}[r.kind]||["•",String(r.kind).toUpperCase()];
+  const _kt=r.kind=="video"?" "+Math.round(r.dur||0)+"s":"";
+  const _kd=$("#lbKind");if(_kd){_kd.className="kindbadge "+r.kind;_kd.textContent=_kb[0]+" "+_kb[1]+_kt}
+  $("#lbSide").innerHTML=`<div class="kv" style="font-size:15px"><b>#${r.n}</b> <span class="hdrbadge ${r.kind}">${_kb[0]} ${_kb[1]}${_kt}</span> · my suggestion: <b>${r.tier}</b></div>
+   <div class="row"><button id="prev">← Prev</button><button id="next">Next →</button><button id="close">Close</button></div>
+   <div class="row dec"><button class="keep ${s.d=="keep"?"on":""}" data-d="keep">Keep (1)</button><button class="maybe ${s.d=="maybe"?"on":""}" data-d="maybe">Maybe (2)</button><button class="cut ${s.d=="cut"?"on":""}" data-d="cut">Cut (3)</button></div>
+   <div class="sec">Who is in it</div><div class="row">${PEOPLE.map(p=>`<span class="chip ${(s.p||[]).includes(p[0])?"on":""}" data-p="${p[0]}">${p[0]}</span>`).join("")}</div>
+   <div class="sec">Caption / fun fact (Hebrew OK)</div><textarea id="cap" placeholder="...">${esc(s.c||"")}</textarea>
+   ${extraHTML(r,s)}
    <div class="kv num">${esc(r.name)}</div>${drvLink(r.name)?`<div>${drvLink(r.name)}</div>`:""}${r.live&&DRV[r.live]?`<div>${drvLink(r.live,"Live Photo clip in Drive ↗")}</div>`:""}
    <div class="kv">Time: <b class="num">${r.t_local.replace("T"," ")}</b> <i>(${esc(r.t_src||"")})</i></div>
    <div class="kv">Place: <b>${esc(r.place||"?")}${r.cc?" ("+r.cc+")":""}</b> ${r.loc_src&&r.loc_src!="gps"?"<i>(inferred: "+esc(r.loc_src)+")</i>":""}<br>GPS: ${gps}</div>
    <div class="kv">Device: <b>${esc(r.device||"unknown")}</b> · sharpness <b class="num">${Math.round(r.sharp)}</b></div>${live}${note}
-   <div class="row dec"><button class="keep ${s.d=="keep"?"on":""}" data-d="keep">Keep (1)</button><button class="maybe ${s.d=="maybe"?"on":""}" data-d="maybe">Maybe (2)</button><button class="cut ${s.d=="cut"?"on":""}" data-d="cut">Cut (3)</button></div>
-   <div class="sec">Who is in it</div><div class="row">${PEOPLE.map(p=>`<span class="chip ${(s.p||[]).includes(p[0])?"on":""}" data-p="${p[0]}">${p[0]}</span>`).join("")}</div>
-   ${filmHTML(r,s)}${extraHTML(r,s)}
-   <div class="sec">Caption / fun fact (Hebrew OK)</div><textarea id="cap" placeholder="...">${esc(s.c||"")}</textarea>
-   <div class="row"><button id="prev">← Prev</button><button id="next">Next →</button><button id="close">Close</button></div>`;
+   ${filmHTML(r,s)}`;
   hydrate($("#lbSide"));
   const pi=$("#ptIn");if(pi)pi.onchange=e=>{st(r).pt=e.target.value.trim();mark("i",r.n);open(cur);refreshCard(r.n)};const pc=$("#ptClr");if(pc)pc.onclick=()=>{st(r).pt="";mark("i",r.n);open(cur);refreshCard(r.n)};
   $("#lbCtx").innerHTML=ctxHTML(r.n);hydrate($("#lbCtx"));const cx=document.querySelector("#lbCtx .now");if(cx)cx.scrollIntoView({inline:"center",block:"nearest"});
@@ -326,11 +344,15 @@ function extraHTML(r,s){let h=`<div class="sec">Album page <span class="kv">(opt
   if(r.kind=="video"||r.kind=="frame")h+=`<label class="kv"><input type="checkbox" id="qrChk" ${s.qr?"checked":""}> <b>Put a QR code for this video</b></label>`+(s.qr?`<input id="qrLink" style="width:100%" dir="ltr" value="${esc(s.ql||"")}" placeholder="Google Photos link (paste now or later)"><input id="qrLab" style="width:100%" value="${esc(s.qt||"")}" placeholder="Label near the QR, e.g. ▶ הזיפליין">`:"");
   return h}
 function filmHTML(r,s){if(r.kind!="video")return"";const F=FILM[fkey(r.id)];const c=(s.pt===undefined||s.pt==="")?null:+s.pt;
-  let h=`<div class="sec">Pick the frame for the album <span class="kv">(clip is ${Math.round(r.dur||0)}s)</span></div>`;
-  if(!F)h+=`<div class="kv">No filmstrip for this clip. Type the second you want below.</div>`;
-  else h+=`<div class="film">`+F.frames.map(f=>`<div><img alt="" data-pt="${f.t}" class="${c!==null&&Math.abs(c-f.t)<0.01?"on":""}" data-k="${esc(filmK(r,f.f))}"><span>${f.t}s</span></div>`).join("")+`</div>`;
-  h+=`<div class="row"><span class="kv" style="align-self:center">Exact second:</span><input id="ptIn" size="6" inputmode="decimal" value="${c===null?"":c}" placeholder="e.g. 12.4"><button id="ptClr">Clear</button></div>`;
-  h+=`<div class="kv">Tap a frame, or type any second (the full video plays only on the PC version). run_picks.bat turns these into full-resolution PNGs.</div>`;return h}
+  let b="";
+  if(!F)b+=`<div class="kv">No filmstrip for this clip. Type the second you want below.</div>`;
+  else b+=`<div class="film">`+F.frames.map(f=>`<div><img alt="" data-pt="${f.t}" class="${c!==null&&Math.abs(c-f.t)<0.01?"on":""}" data-k="${esc(filmK(r,f.f))}"><span>${f.t}s</span></div>`).join("")+`</div>`;
+  b+=`<div class="row"><span class="kv" style="align-self:center">Exact second:</span><input id="ptIn" size="6" inputmode="decimal" value="${c===null?"":c}" placeholder="e.g. 12.4"><button id="ptClr">Clear</button></div>`;
+  b+=`<div class="kv">Tap a frame, or type any second (the full video plays only on the PC version). run_picks.bat turns these into full-resolution PNGs.</div>`;
+  // Collapsed by default so the panel doesn't need a scrollbar; auto-open when a
+  // frame is already picked so the choice is visible.
+  const picked=c!==null?` <span class="kv">— picked ${c}s</span>`:"";
+  return `<details class="framebox"${c!==null?" open":""}><summary>Pick the frame for the album <span class="kv">(clip is ${Math.round(r.dur||0)}s)</span>${picked}</summary><div class="fb">${b}</div></details>`}
 function ctxHTML(n){const i=items.findIndex(r=>r.n==n);const a=items.slice(Math.max(0,i-6),i+7);
   return a.map(r=>{const s=st(r);return `<div class="${s.d} ${r.n==n?"now":""}" data-cn="${r.n}" title="#${r.n} ${r.t_local.slice(5,16)} ${r.tier}"><img alt="" data-k="${esc(r.thumb)}"><span>${r.kind=="video"?"▶ ":""}#${r.n} ${r.tier}</span></div>`}).join("")}
 function setDec(n,d){const r=byN[n];st(r).d=d;st(r).x=true;mark("i",n);if(cur==n)open(n);counts();refreshCard(n)}
