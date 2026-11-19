@@ -299,7 +299,7 @@ function renderBulk(){const b=$("#bulk");b.hidden=sel.size==0;$("#bulkN").textCo
 
 /* ---------- viewer ---------- */
 function open(n){cur=n;lastN=n;const r=byN[n];if(!r)return;const s=st(r);$("#lb").hidden=false;document.body.style.overflow="hidden";
-  let k=r.thumb;const F=FILM[fkey(r.id)];if(F&&s.pt!==undefined&&s.pt!==""){const f=F.frames.reduce((a,b)=>Math.abs(b.t-s.pt)<Math.abs(a.t-s.pt)?b:a);k=filmK(r,f.f)}
+  let k=r.kind=="map"?r.thumb.replace("/t_","/"):r.thumb;const F=FILM[fkey(r.id)];if(F&&s.pt!==undefined&&s.pt!==""){const f=F.frames.reduce((a,b)=>Math.abs(b.t-s.pt)<Math.abs(a.t-s.pt)?b:a);k=filmK(r,f.f)}
   showImg($("#lbImg"),k);const strip=$("#lbStrip");strip.hidden=!r.strip;if(r.strip)showImg(strip,r.strip);
   const note=(r.note||r.dup_of||r.conf)?`<div class="kv">${r.conf?`<span class="pill">match: ${esc(r.conf)}</span> `:""}${r.dup_of?`<b>Duplicate of #${r.dup_of}</b> `:""}${esc(r.note||"")}</div>`:"";
   const live=r.live?`<div class="kv">Live Photo clip paired: <b>${esc(r.live)}</b></div>`:"";
