@@ -56,3 +56,5 @@ want to run `run_picks.sh` / `run_make_wow.sh` on the PC.
 - Live Photo frame picking (task 3) still needs filmstrips generated for the 434 `live` items.
 - If Drive API quota ever gets ugly on a big scrolling session, revisit the day-pack-blob approach
   noted in `CLAUDE.md` task 2 – it was skipped for now in favor of simplicity.
+
+<!-- redeploy 2026-11-20: re-trigger Pages after a transient deploy-pages artifact failure -->
