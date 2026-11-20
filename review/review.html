@@ -43,7 +43,7 @@ main{flex:1;padding:12px 16px 80px;min-width:0}
 .lb{position:fixed;inset:0;background:#000d;z-index:50;display:none}
 .lb.show{display:flex}
 .lbin{margin:auto;width:min(1300px,96vw);height:94vh;background:var(--panel);border-radius:10px;display:flex;overflow:hidden}
-.lbimg{flex:1;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+.lbimg{position:relative;flex:1;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
 .lbimg{overflow:hidden}
 .lbimg img,.lbimg video{max-width:100%;max-height:calc(94vh - 200px)!important;object-fit:contain}
 .lbimg .strip{max-height:100px!important;margin-top:6px}
@@ -56,6 +56,15 @@ main{flex:1;padding:12px 16px 80px;min-width:0}
 .chip{padding:3px 10px;border-radius:14px;cursor:pointer;border:1px solid var(--line);background:#262b34;user-select:none}
 .chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .dec button{flex:1}
+.kindbadge{position:absolute;top:10px;left:10px;z-index:3;display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:.3px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.hdrbadge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;color:#fff;vertical-align:middle}
+.kindbadge.photo,.hdrbadge.photo{background:#2563eb}.kindbadge.video,.hdrbadge.video{background:#d97706}.kindbadge.map,.hdrbadge.map{background:#0891b2}.kindbadge.frame,.hdrbadge.frame{background:#7c3aed}
+.framebox{border:1px solid var(--line);border-radius:8px;margin-top:8px}
+.framebox>summary{cursor:pointer;padding:8px 10px;list-style:none;user-select:none}
+.framebox>summary::-webkit-details-marker{display:none}
+.framebox>summary::before{content:"\25B8 ";color:var(--mut)}
+.framebox[open]>summary::before{content:"\25BE "}
+.framebox>.fb{padding:0 10px 10px}
 .dec .keep.on{background:var(--keep)}.dec .maybe.on{background:var(--maybe);color:#000}.dec .cut.on{background:var(--cut)}
 textarea{width:100%;min-height:60px;direction:rtl;text-align:right}
 .kv{font-size:12px;color:var(--mut)}.kv b{color:var(--fg);font-weight:500}
@@ -101,7 +110,7 @@ textarea{width:100%;min-height:60px;direction:rtl;text-align:right}
   <button id="bulkClear">Clear selection</button>
 </div>
 <div class="lb" id="lb"><div class="lbin">
-  <div class="lbimg"><img id="lbImg"><video id="lbVid" controls preload="auto" muted style="display:none;max-width:100%;max-height:70vh"></video><img id="lbStrip" class="strip"><div class="ctx" id="lbCtx"></div></div>
+  <div class="lbimg"><div class="kindbadge" id="lbKind"></div><img id="lbImg"><video id="lbVid" controls preload="auto" muted style="display:none;max-width:100%;max-height:70vh"></video><img id="lbStrip" class="strip"><div class="ctx" id="lbCtx"></div></div>
   <div class="lbside" id="lbSide"></div>
 </div></div>
 <div class="toast" id="toast"></div>
@@ -165,18 +174,21 @@ function open(n){cur=n;lastN=n;const r=byN[n];if(!r)return;const s=st(r);$("#lb"
   const note=(r.note||r.dup_of||r.conf)?`<div class="kv">${r.conf?`<span class="pill">match: ${r.conf}</span> `:""}${r.dup_of?`<b>Duplicate of #${r.dup_of}</b> `:""}${r.note||""}</div>`:"";
   const live=r.live?`<div class="kv">Live Photo clip paired: <b>${r.live}</b></div>`:"";
   const gps=(r.lat!=null)?`<a style="color:var(--acc)" target="_blank" href="https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=14/${r.lat}/${r.lon}">${(+r.lat).toFixed(4)}, ${(+r.lon).toFixed(4)}</a>`:"none";
+  const _kb={photo:["📷","PHOTO"],video:["▶","VIDEO"],map:["🗺","MAP"],frame:["▦","FRAME"]}[r.kind]||["•",String(r.kind).toUpperCase()];
+  const _kt=r.kind=="video"?" "+Math.round(r.dur||0)+"s":"";
+  const _kd=$("#lbKind");if(_kd){_kd.className="kindbadge "+r.kind;_kd.textContent=_kb[0]+" "+_kb[1]+_kt}
   $("#lbSide").innerHTML=`<div class="lbnav"><button id="prev" title="Previous (&larr;)">&#9664;</button><button id="next" title="Next (&rarr;)">&#9654;</button><button id="close" title="Close (Esc)">&#10005;</button></div>
-   <div class="kv" style="font-size:15px"><b>#${r.n}</b> &middot; ${r.kind}${r.kind=="video"?" "+Math.round(r.dur||0)+"s":""} &middot; my suggestion: <b>${r.tier}</b></div>
+   <div class="kv" style="font-size:15px"><b>#${r.n}</b> <span class="hdrbadge ${r.kind}">${_kb[0]} ${_kb[1]}${_kt}</span> &middot; my suggestion: <b>${r.tier}</b></div>
+   <div class="row dec"><button class="keep ${s.d=="keep"?"on":""}" data-d="keep">Keep (1)</button><button class="maybe ${s.d=="maybe"?"on":""}" data-d="maybe">Maybe (2)</button><button class="cut ${s.d=="cut"?"on":""}" data-d="cut">Cut (3)</button></div>
+   <div class="kv" style="margin-top:10px">Who is in it</div><div class="row">${PEOPLE.map(p=>`<span class="chip ${(s.p||[]).includes(p[0])?"on":""}" data-p="${p[0]}">${p[0]}</span>`).join("")}</div>
+   <div class="kv">Caption / fun fact (Hebrew OK)</div><textarea id="cap" placeholder="...">${s.c||""}</textarea>
+   ${qrHTML(r,s)}
+   ${pageHTML(r,s)}
    <div class="kv">${r.name}</div>
    <div class="kv">Time: <b>${r.t_local.replace("T"," ")}</b> <i>(${r.t_src||""})</i></div>
    <div class="kv">Place: <b>${r.place||"?"}${r.cc?" ("+r.cc+")":""}</b> ${r.loc_src&&r.loc_src!="gps"?"<i>(inferred: "+r.loc_src+")</i>":""}<br>GPS: ${gps}</div>
    <div class="kv">Device: <b>${r.device||"unknown"}</b> &middot; sharpness <b>${Math.round(r.sharp)}</b></div>${live}${note}
-   <div class="row dec"><button class="keep ${s.d=="keep"?"on":""}" data-d="keep">Keep (1)</button><button class="maybe ${s.d=="maybe"?"on":""}" data-d="maybe">Maybe (2)</button><button class="cut ${s.d=="cut"?"on":""}" data-d="cut">Cut (3)</button></div>
-   <div class="kv">Caption / fun fact (Hebrew OK)</div><textarea id="cap" placeholder="...">${s.c||""}</textarea>
-   ${qrHTML(r,s)}
-   ${filmHTML(r,s)}
-   ${pageHTML(r,s)}
-   <div class="kv" style="margin-top:10px">Who is in it</div><div class="row">${PEOPLE.map(p=>`<span class="chip ${(s.p||[]).includes(p[0])?"on":""}" data-p="${p[0]}">${p[0]}</span>`).join("")}</div>`;
+   ${filmHTML(r,s)}`;
   const pi=$("#ptIn");if(pi)pi.onchange=e=>{st(r).pt=e.target.value.trim();persist();open(cur)};const pc=$("#ptClr");if(pc)pc.onclick=()=>{st(r).pt="";persist();open(cur)};
   $("#lbCtx").innerHTML=ctxHTML(r.n);const cx=document.querySelector("#lbCtx .now");if(cx)cx.scrollIntoView({inline:"center",block:"nearest"});
   const pg=$("#pgIn");if(pg)pg.onchange=e=>{const v=e.target.value.trim();st(r).pg=v?parseInt(v)||"":"";persist();open(cur)};const pgc=$("#pgClr");if(pgc)pgc.onclick=()=>{st(r).pg="";persist();open(cur)};
@@ -201,12 +213,16 @@ function qrHTML(r,s){if(r.kind!="video"&&r.kind!="frame")return"";
   return `<div class="kv" style="margin-top:8px"><label><input type="checkbox" id="qrChk" ${s.qr?"checked":""}> <b>Put a QR code for this video</b></label></div>`+(s.qr?`<div class="row"><input id="qrLab" style="width:100%" value="${(s.qt||"").replace(/"/g,"&quot;")}" placeholder="Label near the QR, e.g. ▶ הזיפליין"></div><div class="row"><input id="qrLink" style="width:100%" dir="ltr" value="${(s.ql||"").replace(/"/g,"&quot;")}" placeholder="Google Photos link (paste now or later)"></div>`:"")}
 function filmHTML(r,s){if(r.kind!="video")return"";const F=(window.FILM||{})[fkey(r.id)];
   const cur=(s.pt===undefined||s.pt==="")?null:+s.pt;
-  let h=`<div class="kv" style="margin-top:8px"><b>Pick the frame for the album</b> (clip is ${Math.round(r.dur||0)}s)</div>`;
+  let h="";
   h+=`<div class="kv" id="vidMsg">Player: pause, then step with the buttons or the keys <b>,</b> (back) and <b>.</b> (forward); <b>Enter</b> = use this frame.</div><div class="row"><button data-vs="-1s">-1s</button><button data-vs="-1f">&#9664; frame</button><button data-vs="pp">Play/Pause</button><button data-vs="+1f">frame &#9654;</button><button data-vs="+1s">+1s</button></div><div class="row"><span class="kv">at <b id="vidT">0.000</b>s &nbsp; fps</span><select id="vidFps"><option>24</option><option>25</option><option selected>30</option><option>50</option><option>60</option></select><button id="vidUse" class="keep">Use this frame</button></div>`;
   if(!F){h+=`<div class="kv">(Filmstrip not built - run <b>run_film.bat</b> for thumbnails.)</div>`}
   else h+=`<div class="film">`+F.frames.map(f=>`<div><img data-pt="${f.t}" class="${cur!==null&&Math.abs(cur-f.t)<0.01?"on":""}" src="../film/${fkey(r.id)}/${f.f}"><span>${f.t}s</span></div>`).join("")+`</div>`;
   h+=`<div class="row"><span class="kv">Exact second:</span><input id="ptIn" size="6" value="${cur===null?"":cur}" placeholder="e.g. 12.4"><button id="ptClr">Clear</button></div>`;
-  h+=`<div class="kv">Click a frame, or type any second. After you save decisions.json, run <b>run_picks.bat</b> to get full-resolution PNGs of your picks.</div>`;return h}
+  h+=`<div class="kv">Click a frame, or type any second. After you save decisions.json, run <b>run_picks.bat</b> to get full-resolution PNGs of your picks.</div>`;
+  // Collapsed at the bottom so the panel doesn't need a scrollbar; auto-opens when
+  // a frame is already picked (and includes the PC video player).
+  const picked=cur!==null?` <span class="pill">picked ${cur}s</span>`:"";
+  return `<details class="framebox"${cur!==null?" open":""}><summary><b>Pick the frame for the album</b> (clip is ${Math.round(r.dur||0)}s)${picked}</summary><div class="fb">${h}</div></details>`}
 function ctxHTML(n){const i=items.findIndex(r=>r.n==n);const a=items.slice(Math.max(0,i-6),i+7);
   return a.map(r=>{const s=st(r);return `<div class="${s.d} ${r.n==n?"now":""}" data-cn="${r.n}" title="#${r.n} ${r.t_local.slice(5,16)} ${r.tier}"><img src="${img(r.thumb)}"><span>${r.kind=="video"?"&#9654; ":""}#${r.n} ${r.tier}</span></div>`}).join("")}
 function render2(){document.querySelectorAll(".card").forEach(c=>c.classList.toggle("focus",+c.dataset.n==cur))}
